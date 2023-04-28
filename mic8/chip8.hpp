@@ -20,40 +20,40 @@ public:
     static inline constexpr std::uint8_t VIDEO_HEIGHT = 32;
 
     std::array<bool, 16> keys {};
-    bool draw_flag { false };
+    bool draw_flag { true };
 
     enum class ls_mode {
         chip8_ls,
         chip48_ls,
-        schip_ls
-    };
-    
+        schip_ls };
+
     chip8(const bool chip48_jmp, const bool chip48_shf, const ls_mode mode);
 
     void run_cycle();
+    void decrement_timers();
     void reset();
     void load_rom(std::string_view path);
     void unload_rom();
-    
+
     [[nodiscard]] inline constexpr auto get_mem() const -> const std::span<const std::uint8_t> { return mem; }
     [[nodiscard]] inline constexpr auto get_fb() const -> const std::span<const std::uint32_t> { return fb; }
     [[nodiscard]] inline constexpr auto get_stack() const -> const std::span<const std::uint16_t> { return stack; }
     [[nodiscard]] inline constexpr auto get_reg() const -> const std::span<const std::uint8_t> { return reg; }
-    [[nodiscard]] inline constexpr auto get_opcode() const & -> const std::uint16_t& { return opcode; }
-    [[nodiscard]] inline constexpr auto get_pc() const & -> const std::uint16_t& { return pc; }
-    [[nodiscard]] inline constexpr auto get_ir() const & -> const std::uint16_t& { return ir; }
-    [[nodiscard]] inline constexpr auto get_sp() const & -> const std::uint8_t& { return sp; }
-    [[nodiscard]] inline constexpr auto get_dt() const & -> const std::uint8_t& { return dt; }
-    [[nodiscard]] inline constexpr auto get_st() const & -> const std::uint8_t& { return st; }
+    [[nodiscard]] inline constexpr auto get_instruction() const& -> const std::string_view { return instruction.data(); }
+    [[nodiscard]] inline constexpr auto get_pc() const& -> const std::uint16_t& { return pc; }
+    [[nodiscard]] inline constexpr auto get_ir() const& -> const std::uint16_t& { return ir; }
+    [[nodiscard]] inline constexpr auto get_sp() const& -> const std::uint8_t& { return sp; }
+    [[nodiscard]] inline constexpr auto get_dt() const& -> const std::uint8_t& { return dt; }
+    [[nodiscard]] inline constexpr auto get_st() const& -> const std::uint8_t& { return st; }
 
 private:
-    using op_t = void (chip8::*)();
+    using op_t = void (chip8::*)(const std::uint16_t&);
 
-    std::default_random_engine rng {std::random_device{}()};
-    std::uint16_t opcode;
+    std::default_random_engine rng { std::random_device {}() };
+    std::array<char, 32> instruction {};
 
     std::array<std::uint8_t, MEM_SIZE> mem = [] consteval {
-        auto m = decltype(mem) {}; //what should be the correct variable name in this context???
+        auto m = decltype(mem) {};
         std::array<std::uint8_t, FONTSET_SIZE> fontset {
             0xF0, 0x90, 0x90, 0x90, 0xF0,
             0x20, 0x60, 0x20, 0x20, 0x70,
@@ -85,53 +85,53 @@ private:
     std::uint8_t dt {};
     std::uint8_t st {};
 
-    void op_arr_0();
-    void op_arr_8();
-    void op_arr_E();
-    void op_arr_F();
-    void op_null();
-    void op_00E0();
-    void op_00EE();
-    void op_1nnn();
-    void op_2nnn();
-    void op_3xkk();
-    void op_4xkk();
-    void op_5xy0();
-    void op_6xkk();
-    void op_7xkk();
-    void op_8xy0();
-    void op_8xy1();
-    void op_8xy2();
-    void op_8xy3();
-    void op_8xy4();
-    void op_8xy5();
-    void op_8xy6();
-    void op_8xy7();
-    void op_8xyE();
-    void op_9xy0();
-    void op_Annn();
-    void op_Bnnn();
-    void op_Cxkk();
-    void op_Dxyn();
-    void op_Ex9E();
-    void op_ExA1();
-    void op_Fx07();
-    void op_Fx0A();
-    void op_Fx15();
-    void op_Fx18();
-    void op_Fx1E();
-    void op_Fx29();
-    void op_Fx33();
-    void op_Fx55();
-    void op_Fx65();
+    void op_arr_0(const std::uint16_t& opcode);
+    void op_arr_8(const std::uint16_t& opcode);
+    void op_arr_E(const std::uint16_t& opcode);
+    void op_arr_F(const std::uint16_t& opcode);
+    void op_null(const std::uint16_t& opcode);
+    void op_00E0(const std::uint16_t& opcode);
+    void op_00EE(const std::uint16_t& opcode);
+    void op_1nnn(const std::uint16_t& opcode);
+    void op_2nnn(const std::uint16_t& opcode);
+    void op_3xkk(const std::uint16_t& opcode);
+    void op_4xkk(const std::uint16_t& opcode);
+    void op_5xy0(const std::uint16_t& opcode);
+    void op_6xkk(const std::uint16_t& opcode);
+    void op_7xkk(const std::uint16_t& opcode);
+    void op_8xy0(const std::uint16_t& opcode);
+    void op_8xy1(const std::uint16_t& opcode);
+    void op_8xy2(const std::uint16_t& opcode);
+    void op_8xy3(const std::uint16_t& opcode);
+    void op_8xy4(const std::uint16_t& opcode);
+    void op_8xy5(const std::uint16_t& opcode);
+    void op_8xy6(const std::uint16_t& opcode);
+    void op_8xy7(const std::uint16_t& opcode);
+    void op_8xyE(const std::uint16_t& opcode);
+    void op_9xy0(const std::uint16_t& opcode);
+    void op_Annn(const std::uint16_t& opcode);
+    void op_Bnnn(const std::uint16_t& opcode);
+    void op_Cxkk(const std::uint16_t& opcode);
+    void op_Dxyn(const std::uint16_t& opcode);
+    void op_Ex9E(const std::uint16_t& opcode);
+    void op_ExA1(const std::uint16_t& opcode);
+    void op_Fx07(const std::uint16_t& opcode);
+    void op_Fx0A(const std::uint16_t& opcode);
+    void op_Fx15(const std::uint16_t& opcode);
+    void op_Fx18(const std::uint16_t& opcode);
+    void op_Fx1E(const std::uint16_t& opcode);
+    void op_Fx29(const std::uint16_t& opcode);
+    void op_Fx33(const std::uint16_t& opcode);
+    void op_Fx55(const std::uint16_t& opcode);
+    void op_Fx65(const std::uint16_t& opcode);
 
-    void op_Bxnn_CHIP48();
-    void op_8xy6_CHIP48();
-    void op_8xyE_CHIP48();
-    void op_Fx55_CHIP48();
-    void op_Fx65_CHIP48();
-    void op_Fx55_SCHIP();
-    void op_Fx65_SCHIP();
+    void op_Bxnn_CHIP48(const std::uint16_t& opcode);
+    void op_8xy6_CHIP48(const std::uint16_t& opcode);
+    void op_8xyE_CHIP48(const std::uint16_t& opcode);
+    void op_Fx55_CHIP48(const std::uint16_t& opcode);
+    void op_Fx65_CHIP48(const std::uint16_t& opcode);
+    void op_Fx55_SCHIP(const std::uint16_t& opcode);
+    void op_Fx65_SCHIP(const std::uint16_t& opcode);
 
     std::array<op_t, 0xF + 1> OP_ARR_MAIN = [] consteval {
         auto OP_ARR = decltype(OP_ARR_MAIN) {};
@@ -156,7 +156,7 @@ private:
     }();
 
     std::array<op_t, 0xE + 1> OP_ARR_0 = [] consteval {
-        auto OP_ARR = decltype(OP_ARR_0){};
+        auto OP_ARR = decltype(OP_ARR_0) {};
         OP_ARR.fill(&chip8::op_null);
         OP_ARR[0x0] = &chip8::op_00E0;
         OP_ARR[0xE] = &chip8::op_00EE;
@@ -164,7 +164,7 @@ private:
     }();
 
     std::array<op_t, 0xE + 1> OP_ARR_8 = [] consteval {
-        auto OP_ARR = decltype(OP_ARR_8){};
+        auto OP_ARR = decltype(OP_ARR_8) {};
         OP_ARR.fill(&chip8::op_null);
         OP_ARR[0x0] = &chip8::op_8xy0;
         OP_ARR[0x1] = &chip8::op_8xy1;
@@ -179,7 +179,7 @@ private:
     }();
 
     std::array<op_t, 0xE + 1> OP_ARR_E = [] consteval {
-        auto OP_ARR = decltype(OP_ARR_E){};
+        auto OP_ARR = decltype(OP_ARR_E) {};
         OP_ARR.fill(&chip8::op_null);
         OP_ARR[0x1] = &chip8::op_ExA1;
         OP_ARR[0xE] = &chip8::op_Ex9E;

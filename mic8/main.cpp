@@ -1,165 +1,277 @@
+#include "chip8.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl2.h"
-#include "chip8.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <stdexcept>
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
 #endif
-#include <GLFW/glfw3.h>
-#include <iostream>
-#include "imgui_memory_editor.h"
 #include "ImGuiFileDialog.h"
+#include "imgui_memory_editor.h"
+#include <GLFW/glfw3.h>
+#include <queue>
 
-static inline constexpr std::uint8_t VIEW_COUNT = 6;
+namespace {
+    enum member_index : std::uint8_t {
+        INTERPRETER,
+        ID,
+        TEX_ID,
+        FILE_DLG,
+        MEM_EDIT,
+        IPF,
+        RUNNING,
+        LOADED,
+        INPUT,
+        OP_LOG,
+        VIEWS
+    };
 
-enum views {
-    rom,
-    load_rom,
-    fb,
-    mem_view,
-    cpu_view,
-    disassembler
-};
+    enum view_index: std::uint8_t {
+        SHOW_CONTROLLER,
+        SHOW_FILE_DLG,
+        SHOW_FB,
+        SHOW_CPU_VIEW,
+        SHOW_MEM_VIEW,
+        SHOW_OP_LOG,
+        VIEW_COUNT
+    };
 
-static std::vector<std::tuple<chip8, std::string, GLuint, ImGuiFileDialog, MemoryEditor, std::array<bool, VIEW_COUNT>>> instances {};
+    std::vector<std::tuple<chip8, std::string, GLuint, ImGuiFileDialog, MemoryEditor, std::uint8_t, bool, bool, bool, std::deque<std::string>, std::array<bool, VIEW_COUNT>>> instances {};
 
-static auto instance_search() -> std::uint8_t {
-    int l = 0;
-    int r = instances.size() - 1;
-    while(l <= r) {
-        int m = l + (r - 1) / 2;
-        auto& [_, str, __, ___, ____, _____] = instances[m];
-        std::uint8_t m_val;
-        try {
-            m_val = std::stoi(str);
-        } catch (const std::invalid_argument& e) {
-            ++l;
-            continue;
-        } catch (const std::out_of_range& e) {
-            ++l;
-            continue;
+    decltype(instances.data()) input_p1 { nullptr };
+    decltype(instances.data()) input_p2 { nullptr };
+
+    std::uint8_t input_count {0};
+
+    inline constexpr std::uint8_t OP_LOG_MAX = 20;
+
+    std::array<ImGuiKey, 16> keypad_1 {
+        ImGuiKey_X,
+        ImGuiKey_1,
+        ImGuiKey_2,
+        ImGuiKey_3,
+        ImGuiKey_Q,
+        ImGuiKey_W,
+        ImGuiKey_E,
+        ImGuiKey_A,
+        ImGuiKey_S,
+        ImGuiKey_D,
+        ImGuiKey_Z,
+        ImGuiKey_C,
+        ImGuiKey_4,
+        ImGuiKey_R,
+        ImGuiKey_F,
+        ImGuiKey_V
+    };
+    
+    std::array<ImGuiKey, 16> keypad_2 {
+        ImGuiKey_Comma,
+        ImGuiKey_7,
+        ImGuiKey_8,
+        ImGuiKey_9,
+        ImGuiKey_U,
+        ImGuiKey_I,
+        ImGuiKey_O,
+        ImGuiKey_J,
+        ImGuiKey_K,
+        ImGuiKey_L,
+        ImGuiKey_M,
+        ImGuiKey_Period,
+        ImGuiKey_0,
+        ImGuiKey_P,
+        ImGuiKey_Semicolon,
+        ImGuiKey_Slash
+    };
+
+    auto instance_search() -> std::uint8_t {
+        int l = 0, r = instances.size() - 1;
+        while (l <= r) {
+            int m = l + (r - 1) / 2;
+            auto& n = std::get<ID>(instances[m]);
+            std::uint8_t m_val;
+            try {
+                m_val = std::stoi(n);
+            } catch (const std::invalid_argument& e) {
+                ++l;
+                continue;
+            } catch (const std::out_of_range& e) {
+                ++l;
+                continue;
+            } if (m_val == m) l = m + 1;
+            else r = m - 1;
         }
-        if(m_val == m) l = m + 1; 
-        else r = m - 1;
+        return l;
     }
-    return l;
-}
 
-static void glfw_error_callback(int code, const char* description) {
-    fprintf(stderr, "GLFW Error %d: %s\n", code, description);
+    void add_input(decltype(instances)::value_type& instance) {
+        switch (input_count) {
+            case 0: input_p1 = &instance; break;
+            case 1: input_p2 = &instance;
+        }
+        ++input_count;
+    }
+
+    void remove_input(decltype(instances)::value_type& instance) {
+        switch (input_count) {
+            case 1: input_p1 = nullptr; input_p2 = nullptr; break;
+            case 2: if(input_p1 == &instance) input_p1 = input_p2; input_p2 = nullptr;
+        }
+        --input_count;
+    }
+
+    void glfw_error_callback(int code, const char* description) {
+        fprintf(stderr, "GLFW Error %d: %s\n", code, description);
+    }
 }
 
 auto main(int, char** argv) -> int {
     glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit()) return 1;
+    if (!glfwInit())
+        return 1;
 
     GLFWwindow* window = glfwCreateWindow(1280, 720, "MIC8 Interpreter", nullptr, nullptr);
-    if (window == nullptr) return 1;
+    if (window == nullptr)
+        return 1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    //ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     ImGui::StyleColorsDark();
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL2_Init();
 
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec4 clear_color = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
     
-    bool creation_popup {false};
+    bool creation_popup { false };
 
-    while(!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
         ImGui_ImplOpenGL2_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        
-        if(ImGui::BeginMainMenuBar()) {
-            if(ImGui::BeginMenu("Instances")) {
-                if(ImGui::MenuItem("Create New Instance")) creation_popup = true;
-                if(ImGui::BeginMenu("Delete Instances")) {
+
+        if (ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("Instances")) {
+                if (ImGui::MenuItem("Create New Instance")) creation_popup = true;
+                if (ImGui::BeginMenu("Delete Instances")) {
                     for (auto it = instances.begin(); it != instances.end();) {
-                        if(ImGui::MenuItem(("Delete Instance " + std::get<std::string>(*it)).c_str())){
-                            if(it == --instances.end()) instances.erase(it);
+                        if (ImGui::MenuItem(("Delete Instance " + std::get<ID>(*it)).c_str())) {
+                            if (std::get<INPUT>(*it)) --input_count;
+                            if (it == --instances.end()) instances.erase(it);
                             else instances.erase(it++);
-                        }
-                        else ++it;
+                        } else ++it;
                     }
-                    ImGui::EndMenu();                    
-                }
-                ImGui::EndMenu();
-            }        
-            if(ImGui::BeginMenu("Views")) {
-                if(ImGui::BeginMenu("Frame Buffers")) {
-                    for(auto& instance : instances) ImGui::MenuItem(("Frame Buffer " + std::get<std::string>(instance)).c_str(), nullptr, &std::get<std::array<bool, VIEW_COUNT>>(instance)[fb]);
-                    ImGui::EndMenu();
-                }
-                if(ImGui::BeginMenu("Memory Viewers")) {
-                    for(auto& instance : instances) ImGui::MenuItem(("Memory View " + std::get<std::string>(instance)).c_str(), nullptr, &std::get<std::array<bool, VIEW_COUNT>>(instance)[mem_view]);
-                    ImGui::EndMenu();
-                }
-                if(ImGui::BeginMenu("CPU viewers")) {
-                    for(auto& instance : instances) ImGui::MenuItem(("CPU View " + std::get<std::string>(instance)).c_str(), nullptr, &std::get<std::array<bool, VIEW_COUNT>>(instance)[cpu_view]);
-                    ImGui::EndMenu();
-                }
-                if(ImGui::BeginMenu("Disassembler")) {
-                    for(auto& instance : instances) ImGui::MenuItem(("Disassembler " + std::get<std::string>(instance)).c_str(), nullptr, &std::get<std::array<bool, VIEW_COUNT>>(instance)[disassembler]);
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
             }
-            if(ImGui::BeginMenu("ROMS")) {
-                for(auto& instance : instances) {
-                    if(ImGui::MenuItem(("Load ROM into instance " + std::get<std::string>(instance)).c_str(), nullptr, &std::get<std::array<bool, VIEW_COUNT>>(instance)[load_rom])) {
-                        std::get<ImGuiFileDialog>(instance).OpenDialog("dlg_key_" + std::get<std::string>(instance), "Load ROM into instance " + std::get<std::string>(instance), ".ch8", ".");
-                    }                    
+            if (ImGui::BeginMenu("Views")) {
+                if (ImGui::BeginMenu("Controllers")) {
+                    for (auto& instance : instances) ImGui::MenuItem(("Controller " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_CONTROLLER]);
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Frame Buffers")) {
+                    for (auto& instance : instances) ImGui::MenuItem(("Frame Buffer " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_FB]);
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Memory Viewers")) {
+                    for (auto& instance : instances) ImGui::MenuItem(("Memory View " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_MEM_VIEW]);
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("CPU viewers")) {
+                    for (auto& instance : instances) ImGui::MenuItem(("CPU View " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_CPU_VIEW]);
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Logs")) {
+                    for (auto& instance : instances) ImGui::MenuItem(("Log " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_OP_LOG]);
+                    ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
             }
-            if(ImGui::MenuItem("EXIT")) glfwSetWindowShouldClose(window, true);
+            if (ImGui::BeginMenu("ROMS")) {
+                for (auto& instance : instances) {
+                    const std::string& id = std::get<ID>(instance);
+                    if (ImGui::MenuItem(("Load ROM into instance " + id).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_FILE_DLG])) {
+                        std::get<FILE_DLG>(instance).OpenDialog("dlg_key_" + id, "Load ROM into instance " + id, ".ch8", ".");
+                    }
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Input")) {
+                for (auto& instance : instances) {
+                    const std::string& id = std::get<ID>(instance);
+                    bool& input = std::get<INPUT>(instance);
+                    if (input_count < 2) {
+                        if (ImGui::MenuItem(("Toggle input for instance " + id).c_str(), nullptr, &input)) {
+                            if (input) add_input(instance);
+                            else remove_input(instance);
+                        }
+                    }
+                    else if(input) {
+                        if (ImGui::MenuItem(("Toggle input for instance " + id).c_str(), nullptr, &input)) {
+                            remove_input(instance); 
+                        }
+                    }
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::MenuItem("EXIT")) glfwSetWindowShouldClose(window, true);
             ImGui::EndMainMenuBar();
         }
-        
-        if(creation_popup) {
+
+        if (creation_popup) {
             ImGui::OpenPopup("Create Instance");
             creation_popup = false;
         }
-        if(ImGui::BeginPopupModal("Create Instance")) {
-            std::uint8_t name = instance_search();
-        
-            static bool chip48_jmp {false};
-            static bool chip48_shf {true};
+        if (ImGui::BeginPopupModal("Create Instance")) {
+            const std::uint8_t pos = instance_search();
+            static bool chip48_jmp { false };
+            static bool chip48_shf { true };
+            static chip8::ls_mode mode { chip8::ls_mode::chip48_ls };
 
-            static chip8::ls_mode mode {chip8::ls_mode::chip48_ls};
-        
             ImGui::Text("Alternate Instrucions:");
             ImGui::Separator();
-            ImGui::Checkbox("CHIP48 Jump", &chip48_jmp);        
+            ImGui::Checkbox("CHIP48 Jump", &chip48_jmp);
             ImGui::Checkbox("CHIP48 Shift", &chip48_shf);
             ImGui::Separator();
-            if(ImGui::RadioButton("CHIP8 Load/Store", mode == chip8::ls_mode::chip8_ls)) mode = chip8::ls_mode::chip8_ls;        
-            if(ImGui::RadioButton("CHIP48 Load/Store", mode == chip8::ls_mode::chip48_ls)) mode = chip8::ls_mode::chip48_ls;        
-            if(ImGui::RadioButton("SUPER-CHIP 1.1 Load/Store", mode == chip8::ls_mode::schip_ls)) mode = chip8::ls_mode::schip_ls;
-            if(ImGui::Button("Close")) {
+            if (ImGui::RadioButton("CHIP8 Load/Store", mode == chip8::ls_mode::chip8_ls)) mode = chip8::ls_mode::chip8_ls;
+            if (ImGui::RadioButton("CHIP48 Load/Store", mode == chip8::ls_mode::chip48_ls)) mode = chip8::ls_mode::chip48_ls;
+            if (ImGui::RadioButton("SUPER-CHIP 1.1 Load/Store", mode == chip8::ls_mode::schip_ls)) mode = chip8::ls_mode::schip_ls;
+            if (ImGui::Button("Close")) {
                 ImGui::CloseCurrentPopup();
                 chip48_jmp = false;
                 chip48_shf = true;
                 mode = chip8::ls_mode::chip48_ls;
             }
             ImGui::SameLine();
-            if(ImGui::Button("Ok")){
-                instances.insert(instances.begin() + name, {chip8(chip48_jmp, chip48_shf, mode), std::to_string(name), GLuint{}, ImGuiFileDialog(), MemoryEditor(), std::array<bool,VIEW_COUNT>{}});
+            if (ImGui::Button("Ok")) {
+                GLuint texture_id;
+                glGenTextures(1, &texture_id);
+                glBindTexture(GL_TEXTURE_2D, texture_id);
+
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+                glBindTexture(GL_TEXTURE_2D, 0);
+
+                MemoryEditor mem_editor;
+                mem_editor.ReadOnly = true;
+
+                instances.insert(instances.begin() + pos, { chip8(chip48_jmp, chip48_shf, mode), std::to_string(pos), texture_id, ImGuiFileDialog(), mem_editor, 0, false, false, false, std::deque<std::string> {}, std::array<bool, VIEW_COUNT> {} });
                 ImGui::CloseCurrentPopup();
-                std::get<MemoryEditor>(instances[name]).ReadOnly = true;
-                //std::get<MemoryEditor>(instances[name]).;
                 chip48_jmp = false;
                 chip48_shf = true;
                 mode = chip8::ls_mode::chip48_ls;
@@ -167,55 +279,102 @@ auto main(int, char** argv) -> int {
             ImGui::EndPopup();
         }
 
-        ImGui::ShowMetricsWindow();
-
-        for(auto& instance : instances) {
-            if(std::get<std::array<bool, VIEW_COUNT>>(instance)[rom]) std::get<chip8>(instance).run_cycle();
-            if(std::get<ImGuiFileDialog>(instance).Display("dlg_key_" + std::get<std::string>(instance))) {
-                if(std::get<ImGuiFileDialog>(instance).IsOk()) {
-                    std::get<chip8>(instance).unload_rom();
-                    std::get<chip8>(instance).load_rom(std::get<ImGuiFileDialog>(instance).GetFilePathName());
-                    std::get<std::array<bool,VIEW_COUNT>>(instance)[rom] = true;
+        for (auto& instance : instances) {
+            chip8& interpreter = std::get<INTERPRETER>(instance);
+            const std::string& id = std::get<ID>(instance);
+            const GLuint& tex_id = std::get<TEX_ID>(instance);
+            ImGuiFileDialog& file_dlg = std::get<FILE_DLG>(instance);
+            MemoryEditor& mem_edit = std::get<MEM_EDIT>(instance);
+            std::uint8_t& ipf = std::get<IPF>(instance);
+            bool& running = std::get<RUNNING>(instance);
+            bool& loaded = std::get<LOADED>(instance);
+            auto& op_log = std::get<OP_LOG>(instance);
+            auto& views = std::get<VIEWS>(instance);
+            
+            if (running) {
+                for (int i = 0; i < ipf; ++i) {
+                    interpreter.run_cycle();
+                    if (op_log.size() > OP_LOG_MAX) {
+                        op_log.pop_back();
+                        op_log.push_front(interpreter.get_instruction().data());
+                    }
+                    else op_log.push_front(interpreter.get_instruction().data());
                 }
-                std::get<ImGuiFileDialog>(instance).Close();
-                std::get<std::array<bool, VIEW_COUNT>>(instance)[load_rom] = false;
+                interpreter.decrement_timers();
             }
-            if(std::get<std::array<bool, VIEW_COUNT>>(instance)[fb]) {     
-                if(std::get<chip8>(instance).draw_flag) {
-                    glGenTextures(1, &std::get<GLuint>(instance));
-                    glBindTexture(GL_TEXTURE_2D, std::get<GLuint>(instance));
-
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-                    #if defined(GL_UNPACK_ROW_LENGHT) && !defined(__EMSCRIPTEM__)
-                        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-                    #endif
-                        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, std::get<chip8>(instance).get_fb().data());
-
-                    std::get<chip8>(instance).draw_flag = false;
+            if(input_p1 != nullptr) {
+                for(int i = 0; i < keypad_1.size(); ++i) {
+                    std::get<INTERPRETER>(*input_p1).keys[i] = ImGui::IsKeyDown(keypad_1[i]);
                 }
-  
-                ImGui::Begin(("frame_buffer " + std::get<std::string>(instance)).c_str(), &std::get<std::array<bool, VIEW_COUNT>>(instance)[fb]);
-                //ImGui::SetWindowSize(ImVec2(ImGui::GetWindowWidth(), ImGui::GetWindowWidth() / 2 + ImGui::GetFrameHeight()));
-                ImGui::SetWindowSize(ImVec2((ImGui::GetWindowHeight() - ImGui::GetFrameHeight()) * 2, ImGui::GetWindowHeight()));
-                ImGui::Image((void*)(intptr_t)std::get<GLuint>(instance), ImGui::GetContentRegionAvail());
+            }
+            if(input_p2 != nullptr) {
+                for(int i = 0; i < keypad_2.size(); ++i) {
+                    std::get<INTERPRETER>(*input_p2).keys[i] = ImGui::IsKeyDown(keypad_2[i]);
+                }
+            }
+            if(views[SHOW_CONTROLLER]) {
+                if (ImGui::Begin(("controller " + id).c_str(), &views[SHOW_CONTROLLER])) {
+                    const std::uint8_t min = 0u;
+                    const std::uint8_t max = 30u;
+                    ImGui::SliderScalar("Emulation Speed", ImGuiDataType_U8, &ipf, &min, &max, "%u ipf");
+                    const auto ipf_running = running ? ipf : 0; 
+                    ImGui::Text("IPF: %u", ipf_running);
+                    ImGui::Text("IPS: %f", ipf_running * io.Framerate);
+                    ImGui::BeginDisabled(!loaded); {
+                        if (running) {
+                            if (ImGui::Button("Stop")) running = false;
+                        } else {
+                            if (ImGui::Button("Run")) running = true;
+                        }
+                        if (ImGui::Button("Step")) interpreter.run_cycle();
+                        if (ImGui::Button("Reset")) interpreter.reset();
+                        if (ImGui::Button("Reset + Stop")) {
+                            interpreter.reset();
+                            running = false;
+                        }
+                        ImGui::EndDisabled();
+                    }
+                }
                 ImGui::End();
             }
-            if(std::get<std::array<bool, VIEW_COUNT>>(instance)[mem_view]) {
-                ImGui::Begin(("mem_view " + std::get<std::string>(instance)).c_str(), &std::get<std::array<bool, VIEW_COUNT>>(instance)[mem_view]);
-                std::get<MemoryEditor>(instance).DrawContents((void*)std::get<chip8>(instance).get_mem().data(), std::get<chip8>(instance).MEM_SIZE);
+            if (file_dlg.Display("dlg_key_" + id)) {
+                if (file_dlg.IsOk()) {
+                    running = false;
+                    interpreter.unload_rom();
+                    interpreter.load_rom(file_dlg.GetFilePathName());
+                    loaded = true;
+                }
+                file_dlg.Close();
+                views[SHOW_FILE_DLG] = false;
+            }
+            if (views[SHOW_FB]) {
+                if (interpreter.draw_flag) {
+#if defined(GL_UNPACK_ROW_LENGHT) && !defined(__EMSCRIPTEM__)
+                    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+#endif
+                    glBindTexture(GL_TEXTURE_2D, tex_id);
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, interpreter.get_fb().data());
+                    glBindTexture(GL_TEXTURE_2D, 0);
+
+                    interpreter.draw_flag = false;
+                }
+
+                ImGui::SetNextWindowSizeConstraints(ImVec2(100, 50), ImVec2(FLT_MAX, FLT_MAX), [](ImGuiSizeCallbackData* data) {
+                    data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f);
+                });
+                if (ImGui::Begin(("frame_buffer " + id).c_str(), &views[SHOW_FB])) {
+                    ImGui::Image((void*)(intptr_t) tex_id, ImGui::GetContentRegionAvail());
+                }
                 ImGui::End();
             }
-            if(std::get<std::array<bool, VIEW_COUNT>>(instance)[cpu_view]) {
-                ImGui::Begin(("cpu_view  " + std::get<std::string>(instance)).c_str(), &std::get<std::array<bool, VIEW_COUNT>>(instance)[cpu_view]);
-                    if(ImGui::BeginTable("registers", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(60.0f, 0.0f))) {
+            if (views[SHOW_CPU_VIEW]) {
+                ImGui::SetNextWindowSize(ImVec2(152, 425));
+                if (ImGui::Begin(("cpu_view " + id).c_str(), &views[SHOW_CPU_VIEW])) {
+                    if (ImGui::BeginTable("registers", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(60.0f, 0.0f))) {
                         ImGui::TableSetupColumn("REG");
                         ImGui::TableSetupColumn("VAL");
                         ImGui::TableHeadersRow();
-                        for(int i = 0; const auto& reg : std::get<chip8>(instance).get_reg()) {
+                        for (int i = 0; const auto& reg : interpreter.get_reg()) {
                             ImGui::TableNextColumn();
                             ImGui::Text("V%X", i);
                             ImGui::TableNextColumn();
@@ -225,28 +384,59 @@ auto main(int, char** argv) -> int {
                         ImGui::EndTable();
                     }
                     ImGui::SameLine();
-                    if(ImGui::BeginTable("stack", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(63.0f, 0.0f))) {
-                        ImGui::TableSetupColumn("SP");
+                    if (ImGui::BeginTable("stack", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(68.0f, 0.0f))) {
+                        ImGui::TableSetupColumn("LVL");
                         ImGui::TableSetupColumn("ADDR");
                         ImGui::TableHeadersRow();
-                        for(int i = 0; const auto& addr : std::get<chip8>(instance).get_stack()) {
+                        for (int i = 0; const auto& addr : interpreter.get_stack()) {
                             ImGui::TableNextColumn();
-                            ImGui::Text("%x", i);
-                            ImGui::TableNextColumn();
-                            ImGui::Text("%04x", addr);
+                            if (!addr) {
+                                ImGui::TextDisabled("%x", i);
+                                ImGui::TableNextColumn();
+                                ImGui::TextDisabled("%04x", addr);
+                            } else if (interpreter.get_sp() != i) {
+                                ImGui::Text("%x", i);
+                                ImGui::TableNextColumn();
+                                ImGui::Text("%04x", addr);
+                            } else {
+                                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));                            
+                                ImGui::Text("%x", i);
+                                ImGui::TableNextColumn();
+                                ImGui::Text("%04x", addr);
+                            }
                             ++i;
                         }
                         ImGui::EndTable();
-                        ImGui::Text("PC: %X", std::get<chip8>(instance).get_pc());
-                        ImGui::Text("IR: %X", std::get<chip8>(instance).get_ir());
-                        ImGui::Text("SP: %X", std::get<chip8>(instance).get_sp());
-                        ImGui::Text("DT: %X", std::get<chip8>(instance).get_dt());
-                        ImGui::Text("ST: %X", std::get<chip8>(instance).get_st());
                     }
+                    if (ImGui::BeginChild("##", ImVec2(0,0), true)) {
+                        ImGui::Text("PC: %X", interpreter.get_pc());
+                        ImGui::Text("IR: %X", interpreter.get_ir());
+                        ImGui::Text("SP: %X", interpreter.get_st());
+                        ImGui::Text("DT: %X", interpreter.get_dt());
+                        ImGui::Text("ST: %X", interpreter.get_st());
+                    }
+                    ImGui::EndChild();
+                }
+                ImGui::End();
+            }
+            if (views[SHOW_MEM_VIEW]) {
+                if (ImGui::Begin(("mem_view " + id).c_str(), &views[SHOW_MEM_VIEW])) {
+                    mem_edit.HighlightMin = interpreter.get_pc();
+                    mem_edit.HighlightMax = interpreter.get_pc() + chip8::INSTRUCTION_SIZE;
+                    mem_edit.DrawContents((void*)interpreter.get_mem().data(), interpreter.MEM_SIZE);
+                }
+                ImGui::End();
+            }
+            if (views[SHOW_OP_LOG]) {
+                if(ImGui::Begin("op_log")) {
+                    for(const auto& op : op_log) {
+                        ImGui::Text("%s", op.c_str());
+                    }
+                }
                 ImGui::End();
             }
         }
-                
+
         ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
