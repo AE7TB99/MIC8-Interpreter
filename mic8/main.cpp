@@ -325,12 +325,12 @@ auto main(int, char** argv) -> int {
                 interpreter.decrement_timers();
             }
             if (input_p1 != nullptr) {
-                for (decltype(keypad_1)::size_type i = 0; i < keypad_1.size(); ++i) {
+                for (decltype(keypad_1)::size_type i = 0uz; i < keypad_1.size(); ++i) {
                     std::get<INTERPRETER>(*input_p1).keys[i] = ImGui::IsKeyDown(keypad_1[i]);
                 }
             }
             if (input_p2 != nullptr) {
-                for (decltype(keypad_2)::size_type i = 0; i < keypad_2.size(); ++i) {
+                for (decltype(keypad_2)::size_type i = 0uz; i < keypad_2.size(); ++i) {
                     std::get<INTERPRETER>(*input_p2).keys[i] = ImGui::IsKeyDown(keypad_2[i]);
                 }
             }
