@@ -367,7 +367,7 @@ auto main(int, char** argv) -> int {
                 }
                 ImGui::End();
             }
-            if (file_dlg.Display("dlg_key_" + id, ImGuiWindowFlags_NoCollapse, ImVec2(125, 87), ImVec2(625, 435))) {
+            if (file_dlg.Display("dlg_key_" + id, ImGuiWindowFlags_NoCollapse, ImVec2(625, 435))) {
                 if (file_dlg.IsOk()) {
                     running = false;
                     op_log.clear();
