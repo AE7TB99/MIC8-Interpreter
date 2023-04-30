@@ -105,6 +105,18 @@ namespace {
         }
         return l;
     }
+    
+    void help_marker(const char* desc)
+    {
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && ImGui::BeginTooltip())
+        {
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+            ImGui::TextUnformatted(desc);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
+    }
 
     void add_input(decltype(instances)::value_type& instance) {
         switch (input_count) {
@@ -229,24 +241,33 @@ auto main(int, char** argv) -> int {
         }
 
         if (creation_popup) {
+            ImGui::SetNextWindowSize(ImVec2(245, 213));
             ImGui::OpenPopup("Create Instance");
             creation_popup = false;
         }
-        if (ImGui::BeginPopupModal("Create Instance")) {
+        if (ImGui::BeginPopupModal("Create Instance", nullptr, ImGuiWindowFlags_NoResize)) {
             const std::uint8_t pos = instance_search();
             static bool chip48_jmp { false };
             static bool chip48_shf { true };
             static chip8::ls_mode mode { chip8::ls_mode::chip48_ls };
 
-            ImGui::Text("Alternate Instrucions:");
-            ImGui::Separator();
+            ImGui::SeparatorText("Alternative Instrucions");
             ImGui::Checkbox("CHIP48 Jump", &chip48_jmp);
+            ImGui::SameLine();
+            help_marker("BNNN is replaced by BXNN, which jumps to address XNN + the value in VX (instead of address NNN + the value in V0)");
             ImGui::Checkbox("CHIP48 Shift", &chip48_shf);
+            ImGui::SameLine();
+            help_marker("8XY6 / 8XYE shift VX and ignore VY");
             ImGui::Separator();
             if (ImGui::RadioButton("CHIP8 Load/Store", mode == chip8::ls_mode::chip8_ls)) mode = chip8::ls_mode::chip8_ls;
             if (ImGui::RadioButton("CHIP48 Load/Store", mode == chip8::ls_mode::chip48_ls)) mode = chip8::ls_mode::chip48_ls;
+            ImGui::SameLine();
+            help_marker("FX55 / FX65 increment I by one less than they should (if X is 0, I is not incremented at all)");
             if (ImGui::RadioButton("SUPER-CHIP 1.1 Load/Store", mode == chip8::ls_mode::schip_ls)) mode = chip8::ls_mode::schip_ls;
-            if (ImGui::Button("Close")) {
+            ImGui::SameLine();
+            help_marker("FX55 / FX65 no longer increment I at all");
+            ImGui::Separator();
+            if (ImGui::Button("Cancel")) {
                 ImGui::CloseCurrentPopup();
                 chip48_jmp = false;
                 chip48_shf = true;
