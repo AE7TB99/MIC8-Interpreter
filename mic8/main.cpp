@@ -4,6 +4,7 @@
 #include "imgui_impl_opengl2.h"
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <stdexcept>
 #ifdef __APPLE__
@@ -313,7 +314,7 @@ auto main(int, char** argv) -> int {
             auto& views = std::get<VIEWS>(instance);
             
             if (running) {
-                for (int i = 0; i < ipf; ++i) {
+                for (std::uint_fast8_t i = 0; i < ipf; ++i) {
                     interpreter.run_cycle();
                     if (op_log.size() > OP_LOG_MAX) {
                         op_log.pop_back();
@@ -324,12 +325,12 @@ auto main(int, char** argv) -> int {
                 interpreter.decrement_timers();
             }
             if (input_p1 != nullptr) {
-                for (int i = 0; i < keypad_1.size(); ++i) {
+                for (decltype(keypad_1)::size_type i = 0; i < keypad_1.size(); ++i) {
                     std::get<INTERPRETER>(*input_p1).keys[i] = ImGui::IsKeyDown(keypad_1[i]);
                 }
             }
             if (input_p2 != nullptr) {
-                for (int i = 0; i < keypad_2.size(); ++i) {
+                for (decltype(keypad_2)::size_type i = 0; i < keypad_2.size(); ++i) {
                     std::get<INTERPRETER>(*input_p2).keys[i] = ImGui::IsKeyDown(keypad_2[i]);
                 }
             }
@@ -404,7 +405,7 @@ auto main(int, char** argv) -> int {
                         ImGui::TableSetupColumn("REG");
                         ImGui::TableSetupColumn("VAL");
                         ImGui::TableHeadersRow();
-                        for (int i = 0; const auto& reg : interpreter.get_reg()) {
+                        for (std::uint_fast8_t i = 0; const auto& reg : interpreter.get_reg()) {
                             ImGui::TableNextColumn();
                             ImGui::Text("V%X", i);
                             ImGui::TableNextColumn();
@@ -418,7 +419,7 @@ auto main(int, char** argv) -> int {
                         ImGui::TableSetupColumn("LVL");
                         ImGui::TableSetupColumn("ADDR");
                         ImGui::TableHeadersRow();
-                        for (int i = 0; const auto& addr : interpreter.get_stack()) {
+                        for (std::uint_fast8_t i = 0; const auto& addr : interpreter.get_stack()) {
                             ImGui::TableNextColumn();
                             if (!addr) {
                                 ImGui::TextDisabled("%x", i);
@@ -460,8 +461,8 @@ auto main(int, char** argv) -> int {
             if (views[SHOW_OP_LOG]) {
                 ImGui::SetNextWindowSize(ImVec2(240, 730), ImGuiCond_Once);
                 if (ImGui::Begin(("op_log " + id).c_str())) {
-                    for (const auto& op : op_log) {
-                        ImGui::Text("%s", op.c_str());
+                    for (const auto& opcode : op_log) {
+                        ImGui::Text("%s", opcode.c_str());
                     }
                 }
                 ImGui::End();

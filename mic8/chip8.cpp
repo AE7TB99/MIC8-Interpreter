@@ -236,10 +236,10 @@ void chip8::op_Dxyn(const std::uint16_t& opcode) {
     const std::uint8_t x_pos = reg[x] % VIDEO_WIDTH;
     const std::uint8_t y_pos = reg[y] % VIDEO_HEIGHT;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - DRW, V%X, V%X, %u", opcode, __func__, x, y, n);
-    for (std::uint8_t y_line = 0; y_line < n; ++y_line) {
+    for (std::uint_fast8_t y_line = 0; y_line < n; ++y_line) {
         if (y_pos + y_line >= VIDEO_HEIGHT) break;
         std::uint8_t pixels = mem[ir + y_line];
-        for (std::uint8_t x_line = 0; x_line < 8; ++x_line) {
+        for (std::uint_fast8_t x_line = 0; x_line < 8; ++x_line) {
             if (x_pos + x_line >= VIDEO_WIDTH) continue;
             if (pixels & (0b1000'0000u >> x_line)) {
                 const std::uint16_t pos = x_pos + x_line + (y_pos + y_line) * VIDEO_WIDTH;
@@ -273,7 +273,7 @@ void chip8::op_Fx0A(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - LD V%X, K", opcode, __func__, x);
     bool set = false;
-    for (std::uint8_t i = 0; !set && i < KEY_COUNT; ++i) {
+    for (std::uint_fast8_t i = 0; !set && i < KEY_COUNT; ++i) {
         if (keys[i]) {
             reg[x] = i;
             set = true;
@@ -317,7 +317,7 @@ void chip8::op_Fx33(const std::uint16_t& opcode) {
 void chip8::op_Fx55(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - LD [I], V%X", opcode, __func__, x);
-    for (std::uint8_t i = 0; i <= x; ++i) {
+    for (std::uint_fast8_t i = 0; i <= x; ++i) {
         mem[ir + i] = reg[i];
     }
     ir += x + 1;
@@ -326,7 +326,7 @@ void chip8::op_Fx55(const std::uint16_t& opcode) {
 void chip8::op_Fx65(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - LD V%X, [I]", opcode, __func__, x);
-    for (std::uint8_t i = 0; i <= x; ++i) {
+    for (std::uint_fast8_t i = 0; i <= x; ++i) {
         reg[i] = mem[ir + i];
     }
     ir += x + 1;
@@ -342,7 +342,7 @@ void chip8::op_Bxnn_CHIP48(const std::uint16_t& opcode) {
 void chip8::op_Fx55_CHIP48(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - LD [I], V%X", opcode, __func__, x);
-    for (std::uint8_t i = 0; i <= x; ++i) {
+    for (std::uint_fast8_t i = 0; i <= x; ++i) {
         mem[ir + i] = reg[i];
     }
     ir += x;
@@ -351,7 +351,7 @@ void chip8::op_Fx55_CHIP48(const std::uint16_t& opcode) {
 void chip8::op_Fx65_CHIP48(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - LD V%X, [I]", opcode, __func__, x);
-    for (std::uint8_t i = 0; i <= x; ++i) {
+    for (std::uint_fast8_t i = 0; i <= x; ++i) {
         reg[i] = mem[ir + i];
     }
     ir += x;
@@ -376,7 +376,7 @@ void chip8::op_8xyE_CHIP48(const std::uint16_t& opcode) {
 void chip8::op_Fx55_SCHIP(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - LD [I], V%X", opcode, __func__, x);
-    for (std::uint8_t i = 0; i <= x; ++i) {
+    for (std::uint_fast8_t i = 0; i <= x; ++i) {
         mem[ir + i] = reg[i];
     }
 }
@@ -384,7 +384,7 @@ void chip8::op_Fx55_SCHIP(const std::uint16_t& opcode) {
 void chip8::op_Fx65_SCHIP(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - LD V%X, [I]", opcode, __func__, x);
-    for (std::uint8_t i = 0; i <= x; ++i) {
+    for (std::uint_fast8_t i = 0; i <= x; ++i) {
         reg[i] = mem[ir + i];
     }
 }
