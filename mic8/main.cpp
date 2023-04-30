@@ -129,7 +129,7 @@ namespace {
     void remove_input(decltype(instances)::value_type& instance) {
         switch (input_count) {
             case 1: input_p1 = nullptr; input_p2 = nullptr; break;
-            case 2: if(input_p1 == &instance) input_p1 = input_p2; input_p2 = nullptr;
+            case 2: if (input_p1 == &instance) input_p1 = input_p2; input_p2 = nullptr;
         }
         --input_count;
     }
@@ -228,7 +228,7 @@ auto main(int, char** argv) -> int {
                             else remove_input(instance);
                         }
                     }
-                    else if(input) {
+                    else if (input) {
                         if (ImGui::MenuItem(("Toggle input for instance " + id).c_str(), nullptr, &input)) {
                             remove_input(instance); 
                         }
@@ -323,17 +323,17 @@ auto main(int, char** argv) -> int {
                 }
                 interpreter.decrement_timers();
             }
-            if(input_p1 != nullptr) {
-                for(int i = 0; i < keypad_1.size(); ++i) {
+            if (input_p1 != nullptr) {
+                for (int i = 0; i < keypad_1.size(); ++i) {
                     std::get<INTERPRETER>(*input_p1).keys[i] = ImGui::IsKeyDown(keypad_1[i]);
                 }
             }
-            if(input_p2 != nullptr) {
-                for(int i = 0; i < keypad_2.size(); ++i) {
+            if (input_p2 != nullptr) {
+                for (int i = 0; i < keypad_2.size(); ++i) {
                     std::get<INTERPRETER>(*input_p2).keys[i] = ImGui::IsKeyDown(keypad_2[i]);
                 }
             }
-            if(views[SHOW_CONTROLLER]) {
+            if (views[SHOW_CONTROLLER]) {
                 ImGui::SetNextWindowSize(ImVec2(355, 111), ImGuiCond_Once);
                 if (ImGui::Begin(("controller " + id).c_str(), &views[SHOW_CONTROLLER])) {
                     const std::uint8_t min = 0u;
@@ -459,8 +459,8 @@ auto main(int, char** argv) -> int {
             }
             if (views[SHOW_OP_LOG]) {
                 ImGui::SetNextWindowSize(ImVec2(240, 730), ImGuiCond_Once);
-                if(ImGui::Begin(("op_log " + id).c_str())) {
-                    for(const auto& op : op_log) {
+                if (ImGui::Begin(("op_log " + id).c_str())) {
+                    for (const auto& op : op_log) {
                         ImGui::Text("%s", op.c_str());
                     }
                 }
