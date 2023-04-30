@@ -335,13 +335,13 @@ void chip8::op_Fx65(const std::uint16_t& opcode) {
 void chip8::op_Bxnn_CHIP48(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     const std::uint8_t nn = (opcode & 0x00FFu);
-    //snprintf(instruction.data(), instruction.size(), "%X -> %s - ", opcode, __func__);
+    snprintf(instruction.data(), instruction.size(), "%X -> %s - JP V%X, %u", opcode, __func__, x, nn);
     pc = reg[x] + (x << 8u | nn);
 }
 
 void chip8::op_Fx55_CHIP48(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
-    //snprintf(instruction.data(), instruction.size(), "%X -> %s - LD [I], V%X", opcode, __func__, x);
+    snprintf(instruction.data(), instruction.size(), "%X -> %s - LD [I], V%X", opcode, __func__, x);
     for (std::uint8_t i = 0; i <= x; ++i) {
         mem[ir + i] = reg[i];
     }
@@ -350,7 +350,7 @@ void chip8::op_Fx55_CHIP48(const std::uint16_t& opcode) {
 
 void chip8::op_Fx65_CHIP48(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
-    //snprintf(instruction.data(), instruction.size(), "%X -> %s - LD V%X, [I]", opcode, __func__, x);
+    snprintf(instruction.data(), instruction.size(), "%X -> %s - LD V%X, [I]", opcode, __func__, x);
     for (std::uint8_t i = 0; i <= x; ++i) {
         reg[i] = mem[ir + i];
     }
@@ -359,21 +359,23 @@ void chip8::op_Fx65_CHIP48(const std::uint16_t& opcode) {
 
 void chip8::op_8xy6_CHIP48(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
-    //snprintf(instruction.data(), instruction.size(), "%X -> %s - ", opcode, __func__);
+    // snprintf(instruction.data(), instruction.size(), "%X -> %s - SHR V%X {, V%X}", opcode, __func__, x, x); //not sure if this is right
+    snprintf(instruction.data(), instruction.size(), "%X -> %s - SHR V%X", opcode, __func__, x);
     reg[0xF] = reg[x] & 0x1u;
     reg[x] >>= 1u;
 }
 
 void chip8::op_8xyE_CHIP48(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
-    //snprintf(instruction.data(), instruction.size(), "%X -> %s - ", opcode, __func__);
+    // snprintf(instruction.data(), instruction.size(), "%X -> %s - SHL V%X {, V%X}", opcode, __func__, x, x); //not sure if this is right
+    snprintf(instruction.data(), instruction.size(), "%X -> %s - SHL V%X", opcode, __func__, x);
     reg[0xF] = reg[x] >> 7u;
     reg[x] <<= 1u;
 }
 
 void chip8::op_Fx55_SCHIP(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
-    //snprintf(instruction.data(), instruction.size(), "%X -> %s - LD [I], V%X", opcode, __func__, x);
+    snprintf(instruction.data(), instruction.size(), "%X -> %s - LD [I], V%X", opcode, __func__, x);
     for (std::uint8_t i = 0; i <= x; ++i) {
         mem[ir + i] = reg[i];
     }
@@ -381,7 +383,7 @@ void chip8::op_Fx55_SCHIP(const std::uint16_t& opcode) {
 
 void chip8::op_Fx65_SCHIP(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
-    //snprintf(instruction.data(), instruction.size(), "%X -> %s - LD V%X, [I]", opcode, __func__, x);
+    snprintf(instruction.data(), instruction.size(), "%X -> %s - LD V%X, [I]", opcode, __func__, x);
     for (std::uint8_t i = 0; i <= x; ++i) {
         reg[i] = mem[ir + i];
     }

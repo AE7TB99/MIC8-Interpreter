@@ -50,7 +50,7 @@ private:
     using op_t = void (chip8::*)(const std::uint16_t&);
 
     std::default_random_engine rng { std::random_device {}() };
-    std::array<char, 32> instruction {};
+    std::array<char, 34> instruction {};
 
     std::array<std::uint8_t, MEM_SIZE> mem = [] consteval {
         auto m = decltype(mem) {};

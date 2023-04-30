@@ -46,7 +46,7 @@ namespace {
 
     std::uint8_t input_count {0};
 
-    inline constexpr std::uint8_t OP_LOG_MAX = 20;
+    inline constexpr std::uint8_t OP_LOG_MAX = 40;
 
     std::array<ImGuiKey, 16> keypad_1 {
         ImGuiKey_X,
@@ -201,7 +201,7 @@ auto main(int, char** argv) -> int {
                 for (auto& instance : instances) {
                     const std::string& id = std::get<ID>(instance);
                     if (ImGui::MenuItem(("Load ROM into instance " + id).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_FILE_DLG])) {
-                        std::get<FILE_DLG>(instance).OpenDialog("dlg_key_" + id, "Load ROM into instance " + id, ".ch8", ".");
+                        std::get<FILE_DLG>(instance).OpenDialog("dlg_key_" + id, "Load ROM into instance " + id, ".ch8", "./roms/");
                     }
                 }
                 ImGui::EndMenu();
@@ -313,10 +313,11 @@ auto main(int, char** argv) -> int {
                 }
             }
             if(views[SHOW_CONTROLLER]) {
+                ImGui::SetNextWindowSize(ImVec2(355, 111), ImGuiCond_Once);
                 if (ImGui::Begin(("controller " + id).c_str(), &views[SHOW_CONTROLLER])) {
                     const std::uint8_t min = 0u;
                     const std::uint8_t max = 30u;
-                    ImGui::SliderScalar("Emulation Speed", ImGuiDataType_U8, &ipf, &min, &max, "%u ipf");
+                    ImGui::SliderScalar("Emulation speed", ImGuiDataType_U8, &ipf, &min, &max, "%u ipf");
                     const auto ipf_running = running ? ipf : 0; 
                     ImGui::Text("IPF: %u", ipf_running);
                     ImGui::Text("IPS: %f", ipf_running * io.Framerate);
@@ -326,9 +327,16 @@ auto main(int, char** argv) -> int {
                         } else {
                             if (ImGui::Button("Run")) running = true;
                         }
+                        ImGui::SameLine();
                         if (ImGui::Button("Step")) interpreter.run_cycle();
-                        if (ImGui::Button("Reset")) interpreter.reset();
+                        ImGui::SameLine();
+                        if (ImGui::Button("Reset")) {
+                            op_log.clear();
+                            interpreter.reset();
+                        }
+                        ImGui::SameLine();
                         if (ImGui::Button("Reset + Stop")) {
+                            op_log.clear();
                             interpreter.reset();
                             running = false;
                         }
@@ -337,9 +345,10 @@ auto main(int, char** argv) -> int {
                 }
                 ImGui::End();
             }
-            if (file_dlg.Display("dlg_key_" + id)) {
+            if (file_dlg.Display("dlg_key_" + id, ImGuiWindowFlags_NoCollapse, ImVec2(125, 87), ImVec2(625, 435))) {
                 if (file_dlg.IsOk()) {
                     running = false;
+                    op_log.clear();
                     interpreter.unload_rom();
                     interpreter.load_rom(file_dlg.GetFilePathName());
                     loaded = true;
@@ -359,8 +368,8 @@ auto main(int, char** argv) -> int {
                     interpreter.draw_flag = false;
                 }
 
-                ImGui::SetNextWindowSizeConstraints(ImVec2(100, 50), ImVec2(FLT_MAX, FLT_MAX), [](ImGuiSizeCallbackData* data) {
-                    data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f);
+                ImGui::SetNextWindowSizeConstraints(ImVec2(chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT + ImGui::GetFrameHeight()), ImVec2(FLT_MAX, FLT_MAX), [](ImGuiSizeCallbackData* data) {
+                    data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5 + ImGui::GetFrameHeight());
                 });
                 if (ImGui::Begin(("frame_buffer " + id).c_str(), &views[SHOW_FB])) {
                     ImGui::Image((void*)(intptr_t) tex_id, ImGui::GetContentRegionAvail());
@@ -368,7 +377,7 @@ auto main(int, char** argv) -> int {
                 ImGui::End();
             }
             if (views[SHOW_CPU_VIEW]) {
-                ImGui::SetNextWindowSize(ImVec2(152, 425));
+                ImGui::SetNextWindowSize(ImVec2(152, 425), ImGuiCond_Once);
                 if (ImGui::Begin(("cpu_view " + id).c_str(), &views[SHOW_CPU_VIEW])) {
                     if (ImGui::BeginTable("registers", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(60.0f, 0.0f))) {
                         ImGui::TableSetupColumn("REG");
@@ -428,7 +437,8 @@ auto main(int, char** argv) -> int {
                 ImGui::End();
             }
             if (views[SHOW_OP_LOG]) {
-                if(ImGui::Begin("op_log")) {
+                ImGui::SetNextWindowSize(ImVec2(240, 730), ImGuiCond_Once);
+                if(ImGui::Begin(("op_log " + id).c_str())) {
                     for(const auto& op : op_log) {
                         ImGui::Text("%s", op.c_str());
                     }
