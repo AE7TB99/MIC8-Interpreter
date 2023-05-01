@@ -349,7 +349,14 @@ auto main(int, char** argv) -> int {
                             if (ImGui::Button("Run")) running = true;
                         }
                         ImGui::SameLine();
-                        if (ImGui::Button("Step")) interpreter.run_cycle();
+                        if (ImGui::Button("Step")) {
+                            interpreter.run_cycle();
+                            if (op_log.size() > OP_LOG_MAX) {
+                                op_log.pop_back();
+                                op_log.push_front(interpreter.get_instruction().data());
+                            }
+                            else op_log.push_front(interpreter.get_instruction().data());
+                        }
                         ImGui::SameLine();
                         if (ImGui::Button("Reset")) {
                             op_log.clear();
