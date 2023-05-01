@@ -2,18 +2,17 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl2.h"
+#include "imgui_memory_editor.h"
+#include "ImGuiFileDialog.h"
 #include <algorithm>
-#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <stdexcept>
+#include <queue>
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
 #endif
-#include "ImGuiFileDialog.h"
-#include "imgui_memory_editor.h"
 #include <GLFW/glfw3.h>
-#include <queue>
 
 namespace {
     enum member_index : std::uint8_t {
