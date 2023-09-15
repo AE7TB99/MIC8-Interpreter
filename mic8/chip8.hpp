@@ -27,7 +27,7 @@ public:
         chip48_ls,
         schip_ls };
 
-    chip8(const bool chip48_jmp, const bool chip48_shf, const ls_mode mode);
+    chip8(bool chip48_jmp, bool chip48_shf, ls_mode mode);
 
     void run_cycle();
     void decrement_timers();
@@ -35,11 +35,11 @@ public:
     void load_rom(std::string_view path);
     void unload_rom();
 
-    [[nodiscard]] inline constexpr auto get_mem() const -> const std::span<const std::uint8_t> { return mem; }
-    [[nodiscard]] inline constexpr auto get_fb() const -> const std::span<const std::uint32_t> { return fb; }
-    [[nodiscard]] inline constexpr auto get_stack() const -> const std::span<const std::uint16_t> { return stack; }
-    [[nodiscard]] inline constexpr auto get_reg() const -> const std::span<const std::uint8_t> { return reg; }
-    [[nodiscard]] inline constexpr auto get_instruction() const& -> const std::string_view { return instruction.data(); }
+    [[nodiscard]] inline constexpr auto get_mem() const -> std::span<const std::uint8_t> { return mem; }
+    [[nodiscard]] inline constexpr auto get_fb() const -> std::span<const std::uint32_t> { return fb; }
+    [[nodiscard]] inline constexpr auto get_stack() const -> std::span<const std::uint16_t> { return stack; }
+    [[nodiscard]] inline constexpr auto get_reg() const -> std::span<const std::uint8_t> { return reg; }
+    [[nodiscard]] inline constexpr auto get_instruction() const& -> std::string_view { return instruction.data(); }
     [[nodiscard]] inline constexpr auto get_pc() const& -> const std::uint16_t& { return pc; }
     [[nodiscard]] inline constexpr auto get_ir() const& -> const std::uint16_t& { return ir; }
     [[nodiscard]] inline constexpr auto get_sp() const& -> const std::uint8_t& { return sp; }

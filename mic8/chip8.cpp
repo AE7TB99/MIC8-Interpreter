@@ -1,6 +1,5 @@
 #include "chip8.hpp"
 #include <array>
-#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <limits>

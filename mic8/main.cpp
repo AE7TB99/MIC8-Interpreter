@@ -4,13 +4,13 @@
 #include "imgui_impl_opengl2.h"
 #include "imgui_memory_editor.h"
 #include "ImGuiFileDialog.h"
-#include <algorithm>
-#include <cstdint>
-#include <cstdlib>
 #include <stdexcept>
 #include <queue>
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
+#endif
+#ifdef _WIN32
+#define GL_CLAMP_TO_EDGE 0x812F
 #endif
 #include <GLFW/glfw3.h>
 
@@ -87,9 +87,9 @@ namespace {
     };
 
     auto instance_search() -> std::uint8_t {
-        int l = 0, r = instances.size() - 1;
-        while (l <= r) {
-            int m = l + (r - 1) / 2;
+        std::size_t l = 0, r = instances.size();
+        while (l < r) {
+            auto m = l + (r - l) / 2;
             auto& n = std::get<ID>(instances[m]);
             std::uint8_t m_val;
             try {
@@ -101,7 +101,7 @@ namespace {
                 ++l;
                 continue;
             } if (m_val == m) l = m + 1;
-            else r = m - 1;
+              else r = m;
         }
         return l;
     }
@@ -121,7 +121,8 @@ namespace {
     void add_input(decltype(instances)::value_type& instance) {
         switch (input_count) {
             case 0: input_p1 = &instance; break;
-            case 1: input_p2 = &instance;
+            case 1: input_p2 = &instance; break;
+            default: //this should never happen
         }
         ++input_count;
     }
@@ -129,7 +130,8 @@ namespace {
     void remove_input(decltype(instances)::value_type& instance) {
         switch (input_count) {
             case 1: input_p1 = nullptr; input_p2 = nullptr; break;
-            case 2: if (input_p1 == &instance) input_p1 = input_p2; input_p2 = nullptr;
+            case 2: if (input_p1 == &instance) input_p1 = input_p2; input_p2 = nullptr; break;
+            default: //this should never happen
         }
         --input_count;
     }
@@ -139,7 +141,7 @@ namespace {
     }
 }
 
-auto main(int, char** argv) -> int {
+auto main() -> int {
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
@@ -251,7 +253,7 @@ auto main(int, char** argv) -> int {
             static bool chip48_shf { true };
             static chip8::ls_mode mode { chip8::ls_mode::chip48_ls };
 
-            ImGui::SeparatorText("Alternative Instrucions");
+            ImGui::SeparatorText("Alternative Instructions");
             ImGui::Checkbox("CHIP48 Jump", &chip48_jmp);
             ImGui::SameLine();
             help_marker("BNNN is replaced by BXNN, which jumps to address XNN + the value in VX (instead of address NNN + the value in V0)");
@@ -317,9 +319,9 @@ auto main(int, char** argv) -> int {
                     interpreter.run_cycle();
                     if (op_log.size() > OP_LOG_MAX) {
                         op_log.pop_back();
-                        op_log.push_front(interpreter.get_instruction().data());
+                        op_log.emplace_front(interpreter.get_instruction().data());
                     }
-                    else op_log.push_front(interpreter.get_instruction().data());
+                    else op_log.emplace_front(interpreter.get_instruction().data());
                 }
                 interpreter.decrement_timers();
             }
@@ -339,9 +341,9 @@ auto main(int, char** argv) -> int {
                     const std::uint8_t min = 0u;
                     const std::uint8_t max = 30u;
                     ImGui::SliderScalar("Emulation speed", ImGuiDataType_U8, &ipf, &min, &max, "%u ipf");
-                    const auto ipf_running = running ? ipf : 0; 
+                    const auto ipf_running = running ? ipf : 0;
                     ImGui::Text("IPF: %u", ipf_running);
-                    ImGui::Text("IPS: %f", ipf_running * io.Framerate);
+                    ImGui::Text("IPS: %f", static_cast<float>(ipf_running) * io.Framerate);
                     ImGui::BeginDisabled(!loaded); {
                         if (running) {
                             if (ImGui::Button("Stop")) running = false;
@@ -353,9 +355,9 @@ auto main(int, char** argv) -> int {
                             interpreter.run_cycle();
                             if (op_log.size() > OP_LOG_MAX) {
                                 op_log.pop_back();
-                                op_log.push_front(interpreter.get_instruction().data());
+                                op_log.emplace_front(interpreter.get_instruction().data());
                             }
-                            else op_log.push_front(interpreter.get_instruction().data());
+                            else op_log.emplace_front(interpreter.get_instruction().data());
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Reset")) {
@@ -397,7 +399,7 @@ auto main(int, char** argv) -> int {
                 }
 
                 ImGui::SetNextWindowSizeConstraints(ImVec2(chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT + ImGui::GetFrameHeight()), ImVec2(FLT_MAX, FLT_MAX), [](ImGuiSizeCallbackData* data) {
-                    data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5 + ImGui::GetFrameHeight());
+                    data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
                 });
                 if (ImGui::Begin(("frame_buffer " + id).c_str(), &views[SHOW_FB])) {
                     ImGui::Image((void*)(intptr_t) tex_id, ImGui::GetContentRegionAvail());
@@ -460,7 +462,7 @@ auto main(int, char** argv) -> int {
                 if (ImGui::Begin(("mem_view " + id).c_str(), &views[SHOW_MEM_VIEW])) {
                     mem_edit.HighlightMin = interpreter.get_pc();
                     mem_edit.HighlightMax = interpreter.get_pc() + chip8::INSTRUCTION_SIZE;
-                    mem_edit.DrawContents((void*)interpreter.get_mem().data(), interpreter.MEM_SIZE);
+                    mem_edit.DrawContents((void*)interpreter.get_mem().data(), chip8::MEM_SIZE);
                 }
                 ImGui::End();
             }
