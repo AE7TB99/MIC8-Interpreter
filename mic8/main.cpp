@@ -359,9 +359,9 @@ auto main() -> int {
                         if (ImGui::Button("Step")) {
                             interpreter.run_cycle();
                             if (op_log.size() > OP_LOG_MAX) {
-                                op_log.pop_back();
-                                op_log.emplace_front(interpreter.get_instruction().data());
-                            } else op_log.emplace_front(interpreter.get_instruction().data());
+                                op_log.pop_front();
+                                op_log.emplace_back(interpreter.get_instruction().data());
+                            } else op_log.emplace_back(interpreter.get_instruction().data());
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Reset")) {
