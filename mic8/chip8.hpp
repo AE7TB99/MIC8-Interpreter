@@ -20,12 +20,13 @@ public:
     static inline constexpr std::uint8_t VIDEO_HEIGHT = 32;
 
     std::array<bool, 16> keys {};
-    bool draw_flag { true };
+    bool draw_flag {true};
 
     enum class ls_mode {
         chip8_ls,
         chip48_ls,
-        schip_ls };
+        schip_ls
+    };
 
     chip8(bool chip48_jmp, bool chip48_shf, ls_mode mode);
 
@@ -36,41 +37,51 @@ public:
     void unload_rom();
 
     [[nodiscard]] inline constexpr auto get_mem() const -> std::span<const std::uint8_t> { return mem; }
+
     [[nodiscard]] inline constexpr auto get_fb() const -> std::span<const std::uint32_t> { return fb; }
+
     [[nodiscard]] inline constexpr auto get_stack() const -> std::span<const std::uint16_t> { return stack; }
+
     [[nodiscard]] inline constexpr auto get_reg() const -> std::span<const std::uint8_t> { return reg; }
+
     [[nodiscard]] inline constexpr auto get_instruction() const& -> std::string_view { return instruction.data(); }
+
     [[nodiscard]] inline constexpr auto get_pc() const& -> const std::uint16_t& { return pc; }
+
     [[nodiscard]] inline constexpr auto get_ir() const& -> const std::uint16_t& { return ir; }
+
     [[nodiscard]] inline constexpr auto get_sp() const& -> const std::uint8_t& { return sp; }
+
     [[nodiscard]] inline constexpr auto get_dt() const& -> const std::uint8_t& { return dt; }
+
     [[nodiscard]] inline constexpr auto get_st() const& -> const std::uint8_t& { return st; }
 
 private:
     using op_t = void (chip8::*)(const std::uint16_t&);
 
-    std::default_random_engine rng { std::random_device {}() };
+    std::default_random_engine rng {std::random_device {}()};
     std::array<char, 34> instruction {};
+
 
     std::array<std::uint8_t, MEM_SIZE> mem = [] consteval {
         auto m = decltype(mem) {};
         std::array<std::uint8_t, FONTSET_SIZE> fontset {
-            0xF0, 0x90, 0x90, 0x90, 0xF0,
-            0x20, 0x60, 0x20, 0x20, 0x70,
-            0xF0, 0x10, 0xF0, 0x80, 0xF0,
-            0xF0, 0x10, 0xF0, 0x10, 0xF0,
-            0x90, 0x90, 0xF0, 0x10, 0x10,
-            0xF0, 0x80, 0xF0, 0x10, 0xF0,
-            0xF0, 0x80, 0xF0, 0x90, 0xF0,
-            0xF0, 0x10, 0x20, 0x40, 0x40,
-            0xF0, 0x90, 0xF0, 0x90, 0xF0,
-            0xF0, 0x90, 0xF0, 0x10, 0xF0,
-            0xF0, 0x90, 0xF0, 0x90, 0x90,
-            0xE0, 0x90, 0xE0, 0x90, 0xE0,
-            0xF0, 0x80, 0x80, 0x80, 0xF0,
-            0xE0, 0x90, 0x90, 0x90, 0xE0,
-            0xF0, 0x80, 0xF0, 0x80, 0xF0,
-            0xF0, 0x80, 0xF0, 0x80, 0x80
+                0xF0, 0x90, 0x90, 0x90, 0xF0,
+                0x20, 0x60, 0x20, 0x20, 0x70,
+                0xF0, 0x10, 0xF0, 0x80, 0xF0,
+                0xF0, 0x10, 0xF0, 0x10, 0xF0,
+                0x90, 0x90, 0xF0, 0x10, 0x10,
+                0xF0, 0x80, 0xF0, 0x10, 0xF0,
+                0xF0, 0x80, 0xF0, 0x90, 0xF0,
+                0xF0, 0x10, 0x20, 0x40, 0x40,
+                0xF0, 0x90, 0xF0, 0x90, 0xF0,
+                0xF0, 0x90, 0xF0, 0x10, 0xF0,
+                0xF0, 0x90, 0xF0, 0x90, 0x90,
+                0xE0, 0x90, 0xE0, 0x90, 0xE0,
+                0xF0, 0x80, 0x80, 0x80, 0xF0,
+                0xE0, 0x90, 0x90, 0x90, 0xE0,
+                0xF0, 0x80, 0xF0, 0x80, 0xF0,
+                0xF0, 0x80, 0xF0, 0x80, 0x80
         };
         std::copy(fontset.begin(), fontset.end(), m.begin() + FONTSET_ADDR);
         return m;
@@ -79,7 +90,7 @@ private:
     std::array<std::uint32_t, VIDEO_WIDTH * VIDEO_HEIGHT> fb {};
     std::array<std::uint16_t, STACK_SIZE> stack {};
     std::array<std::uint8_t, REG_COUNT> reg {};
-    std::uint16_t pc { ROM_ADDR };
+    std::uint16_t pc {ROM_ADDR};
     std::uint16_t ir {};
     std::uint8_t sp {};
     std::uint8_t dt {};

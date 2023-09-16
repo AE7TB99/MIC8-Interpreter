@@ -12,7 +12,8 @@ chip8::chip8(const bool chip48_jmp, const bool chip48_shf, const ls_mode mode) {
         OP_ARR_8[0xE] = &chip8::op_8xyE_CHIP48;
     }
     switch (mode) {
-        case ls_mode::chip8_ls: break;
+        case ls_mode::chip8_ls:
+            break;
         case ls_mode::chip48_ls:
             OP_ARR_F[0x55] = &chip8::op_Fx55_CHIP48;
             OP_ARR_F[0x65] = &chip8::op_Fx65_CHIP48;
@@ -67,8 +68,11 @@ void chip8::unload_rom() {
 }
 
 void chip8::op_arr_0(const std::uint16_t& opcode) { (this->*OP_ARR_0[opcode & 0x000Fu])(opcode); }
+
 void chip8::op_arr_8(const std::uint16_t& opcode) { (this->*OP_ARR_8[opcode & 0x000Fu])(opcode); }
+
 void chip8::op_arr_E(const std::uint16_t& opcode) { (this->*OP_ARR_E[opcode & 0x000Fu])(opcode); }
+
 void chip8::op_arr_F(const std::uint16_t& opcode) { (this->*OP_ARR_F[opcode & 0x00FFu])(opcode); }
 
 void chip8::op_null(const std::uint16_t& opcode) {
@@ -106,6 +110,7 @@ void chip8::op_3xkk(const std::uint16_t& opcode) {
     if (reg[x] == kk)
         pc += INSTRUCTION_SIZE;
 }
+
 void chip8::op_4xkk(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     const std::uint8_t kk = opcode & 0x0FFFu;
@@ -113,6 +118,7 @@ void chip8::op_4xkk(const std::uint16_t& opcode) {
     if (reg[x] != kk)
         pc += INSTRUCTION_SIZE;
 }
+
 void chip8::op_5xy0(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     const std::uint8_t y = (opcode & 0x00F0u) >> 4u;
@@ -120,6 +126,7 @@ void chip8::op_5xy0(const std::uint16_t& opcode) {
     if (reg[x] == reg[y])
         pc += INSTRUCTION_SIZE;
 }
+
 void chip8::op_6xkk(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     const std::uint8_t kk = opcode & 0x00FFu;
@@ -209,6 +216,7 @@ void chip8::op_9xy0(const std::uint16_t& opcode) {
     if (reg[x] != reg[y])
         pc += INSTRUCTION_SIZE;
 }
+
 void chip8::op_Annn(const std::uint16_t& opcode) {
     const std::uint16_t nnn = opcode & 0x0FFFu;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - LD I, %u", opcode, __func__, nnn);
@@ -225,7 +233,7 @@ void chip8::op_Cxkk(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     const std::uint8_t kk = opcode & 0x00FFu;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - RND V%X, %u", opcode, __func__, x, kk);
-    reg[x] = std::uniform_int_distribution<>(0, std::numeric_limits<std::uint8_t>::max())(rng)& kk;
+    reg[x] = std::uniform_int_distribution<>(0, std::numeric_limits<std::uint8_t>::max())(rng) & kk;
 }
 
 void chip8::op_Dxyn(const std::uint16_t& opcode) {
@@ -256,12 +264,14 @@ void chip8::op_Ex9E(const std::uint16_t& opcode) {
     if (keys[reg[x]])
         pc += INSTRUCTION_SIZE;
 }
+
 void chip8::op_ExA1(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - SKNP V%X", opcode, __func__, x);
     if (!keys[reg[x]])
         pc += INSTRUCTION_SIZE;
 }
+
 void chip8::op_Fx07(const std::uint16_t& opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     snprintf(instruction.data(), instruction.size(), "%X -> %s - LD V%X, DT", opcode, __func__, x);
