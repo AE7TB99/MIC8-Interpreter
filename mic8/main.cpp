@@ -323,7 +323,7 @@ auto main() -> int {
             auto& views = std::get<VIEWS>(instance);
 
             if (running) {
-                for (std::uint_fast8_t i = 0; i < ipf; ++i) {
+                for (unsigned char i = 0; i < ipf; ++i) {
                     interpreter.run_cycle();
                     if (op_log_max != 0) {
                         while (op_log.size() >= op_log_max) op_log.pop_front();
