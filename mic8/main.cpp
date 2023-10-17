@@ -458,7 +458,7 @@ auto main() -> int {
                     if (ImGui::BeginChild("##", ImVec2(0, 0), true)) {
                         ImGui::Text("PC: %X", interpreter.get_pc());
                         ImGui::Text("IR: %X", interpreter.get_ir());
-                        ImGui::Text("SP: %X", interpreter.get_st());
+                        ImGui::Text("SP: %X", interpreter.get_sp());
                         ImGui::Text("DT: %X", interpreter.get_dt());
                         ImGui::Text("ST: %X", interpreter.get_st());
                     }
