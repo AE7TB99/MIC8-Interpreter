@@ -50,43 +50,45 @@ namespace {
 
     unsigned char input_count {0};
 
+    //@formatter:off
     std::array<ImGuiKey, 16> keypad_1 {
-            ImGuiKey_X,
-            ImGuiKey_1,
-            ImGuiKey_2,
-            ImGuiKey_3,
-            ImGuiKey_Q,
-            ImGuiKey_W,
-            ImGuiKey_E,
-            ImGuiKey_A,
-            ImGuiKey_S,
-            ImGuiKey_D,
-            ImGuiKey_Z,
-            ImGuiKey_C,
-            ImGuiKey_4,
-            ImGuiKey_R,
-            ImGuiKey_F,
-            ImGuiKey_V
+        ImGuiKey_X,
+        ImGuiKey_1,
+        ImGuiKey_2,
+        ImGuiKey_3,
+        ImGuiKey_Q,
+        ImGuiKey_W,
+        ImGuiKey_E,
+        ImGuiKey_A,
+        ImGuiKey_S,
+        ImGuiKey_D,
+        ImGuiKey_Z,
+        ImGuiKey_C,
+        ImGuiKey_4,
+        ImGuiKey_R,
+        ImGuiKey_F,
+        ImGuiKey_V
     };
 
     std::array<ImGuiKey, 16> keypad_2 {
-            ImGuiKey_Comma,
-            ImGuiKey_7,
-            ImGuiKey_8,
-            ImGuiKey_9,
-            ImGuiKey_U,
-            ImGuiKey_I,
-            ImGuiKey_O,
-            ImGuiKey_J,
-            ImGuiKey_K,
-            ImGuiKey_L,
-            ImGuiKey_M,
-            ImGuiKey_Period,
-            ImGuiKey_0,
-            ImGuiKey_P,
-            ImGuiKey_Semicolon,
-            ImGuiKey_Slash
+        ImGuiKey_Comma,
+        ImGuiKey_7,
+        ImGuiKey_8,
+        ImGuiKey_9,
+        ImGuiKey_U,
+        ImGuiKey_I,
+        ImGuiKey_O,
+        ImGuiKey_J,
+        ImGuiKey_K,
+        ImGuiKey_L,
+        ImGuiKey_M,
+        ImGuiKey_Period,
+        ImGuiKey_0,
+        ImGuiKey_P,
+        ImGuiKey_Semicolon,
+        ImGuiKey_Slash
     };
+    //@formatter:on
 
     auto instance_search() -> unsigned char {
         std::size_t l = 0, r = instances.size();
@@ -202,23 +204,28 @@ auto main() -> int {
             }
             if (ImGui::BeginMenu("Views")) {
                 if (ImGui::BeginMenu("Controllers")) {
-                    for (auto& instance: instances) ImGui::MenuItem(("Controller " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_CONTROLLER]);
+                    for (auto& instance: instances)
+                        ImGui::MenuItem(("Controller " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_CONTROLLER]);
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Frame Buffers")) {
-                    for (auto& instance: instances) ImGui::MenuItem(("Frame Buffer " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_FB]);
+                    for (auto& instance: instances)
+                        ImGui::MenuItem(("Frame Buffer " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_FB]);
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Memory Viewers")) {
-                    for (auto& instance: instances) ImGui::MenuItem(("Memory View " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_MEM_VIEW]);
+                    for (auto& instance: instances)
+                        ImGui::MenuItem(("Memory View " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_MEM_VIEW]);
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("CPU viewers")) {
-                    for (auto& instance: instances) ImGui::MenuItem(("CPU View " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_CPU_VIEW]);
+                    for (auto& instance: instances)
+                        ImGui::MenuItem(("CPU View " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_CPU_VIEW]);
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Logs")) {
-                    for (auto& instance: instances) ImGui::MenuItem(("Log " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_OP_LOG]);
+                    for (auto& instance: instances)
+                        ImGui::MenuItem(("Log " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_OP_LOG]);
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
@@ -301,7 +308,9 @@ auto main() -> int {
                 MemoryEditor mem_editor;
                 mem_editor.ReadOnly = true;
 
-                instances.insert(instances.begin() + pos, {chip8(chip48_jmp, chip48_shf, mode), std::to_string(pos), texture_id, ImGuiFileDialog(), mem_editor, 0, false, false, false, std::deque<std::string> {}, op_log_default_size, std::array<bool, VIEW_COUNT> {}});
+                instances.insert(instances.begin() + pos,
+                                 {chip8(chip48_jmp, chip48_shf, mode), std::to_string(pos), texture_id, ImGuiFileDialog(), mem_editor, 0, false,
+                                  false, false, std::deque<std::string> {}, op_log_default_size, std::array<bool, VIEW_COUNT> {}});
                 ImGui::CloseCurrentPopup();
                 chip48_jmp = false;
                 chip48_shf = true;
@@ -400,15 +409,17 @@ auto main() -> int {
                     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 #endif
                     glBindTexture(GL_TEXTURE_2D, tex_id);
-                    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, interpreter.get_fb().data());
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE,
+                                    interpreter.get_fb().data());
                     glBindTexture(GL_TEXTURE_2D, 0);
 
                     interpreter.draw_flag = false;
                 }
 
-                ImGui::SetNextWindowSizeConstraints(ImVec2(chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT + ImGui::GetFrameHeight()), ImVec2(FLT_MAX, FLT_MAX), [](ImGuiSizeCallbackData* data) {
-                    data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
-                });
+                ImGui::SetNextWindowSizeConstraints(ImVec2(chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT + ImGui::GetFrameHeight()),
+                                                    ImVec2(FLT_MAX, FLT_MAX), [](ImGuiSizeCallbackData* data) {
+                            data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
+                        });
                 if (ImGui::Begin(("frame_buffer " + id).c_str(), &views[SHOW_FB])) {
                     ImGui::Image((void*) (intptr_t) tex_id, ImGui::GetContentRegionAvail());
                 }
