@@ -17,6 +17,7 @@
 #include <GLFW/glfw3.h>
 
 namespace {
+
     enum member_index : unsigned char {
         INTERPRETER,
         ID,

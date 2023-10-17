@@ -20,7 +20,7 @@ public:
     static inline constexpr std::uint8_t VIDEO_HEIGHT = 32;
 
     std::array<bool, 16> keys {};
-    bool draw_flag {true};
+    bool draw_flag { true };
 
     enum class ls_mode {
         chip8_ls,
@@ -44,20 +44,20 @@ public:
 
     [[nodiscard]] inline constexpr auto get_reg() const -> std::span<const std::uint8_t> { return reg; }
 
-    [[nodiscard]] inline constexpr auto get_instruction() const& -> std::string_view { return instruction.data(); }
+    [[nodiscard]] inline constexpr auto get_instruction() const -> std::string_view { return instruction.data(); }
 
-    [[nodiscard]] inline constexpr auto get_pc() const& -> const std::uint16_t& { return pc; }
+    [[nodiscard]] inline constexpr auto get_pc() const -> std::uint16_t { return pc; }
 
-    [[nodiscard]] inline constexpr auto get_ir() const& -> const std::uint16_t& { return ir; }
+    [[nodiscard]] inline constexpr auto get_ir() const -> std::uint16_t { return ir; }
 
-    [[nodiscard]] inline constexpr auto get_sp() const& -> const std::uint8_t& { return sp; }
+    [[nodiscard]] inline constexpr auto get_sp() const -> std::uint8_t { return sp; }
 
-    [[nodiscard]] inline constexpr auto get_dt() const& -> const std::uint8_t& { return dt; }
+    [[nodiscard]] inline constexpr auto get_dt() const -> std::uint8_t { return dt; }
 
-    [[nodiscard]] inline constexpr auto get_st() const& -> const std::uint8_t& { return st; }
+    [[nodiscard]] inline constexpr auto get_st() const -> std::uint8_t { return st; }
 
 private:
-    using op_t = void (chip8::*)(const std::uint16_t&);
+    using op_t = void (chip8::*)(const std::uint16_t);
 
     std::default_random_engine rng {std::random_device {}()};
     std::array<char, 34> instruction {};
@@ -90,59 +90,59 @@ private:
     std::array<std::uint32_t, VIDEO_WIDTH * VIDEO_HEIGHT> fb {};
     std::array<std::uint16_t, STACK_SIZE> stack {};
     std::array<std::uint8_t, REG_COUNT> reg {};
-    std::uint16_t pc {ROM_ADDR};
+    std::uint16_t pc { ROM_ADDR };
     std::uint16_t ir {};
     std::uint8_t sp {};
     std::uint8_t dt {};
     std::uint8_t st {};
 
-    void op_arr_0(const std::uint16_t& opcode);
-    void op_arr_8(const std::uint16_t& opcode);
-    void op_arr_E(const std::uint16_t& opcode);
-    void op_arr_F(const std::uint16_t& opcode);
-    void op_null(const std::uint16_t& opcode);
-    void op_00E0(const std::uint16_t& opcode);
-    void op_00EE(const std::uint16_t& opcode);
-    void op_1nnn(const std::uint16_t& opcode);
-    void op_2nnn(const std::uint16_t& opcode);
-    void op_3xkk(const std::uint16_t& opcode);
-    void op_4xkk(const std::uint16_t& opcode);
-    void op_5xy0(const std::uint16_t& opcode);
-    void op_6xkk(const std::uint16_t& opcode);
-    void op_7xkk(const std::uint16_t& opcode);
-    void op_8xy0(const std::uint16_t& opcode);
-    void op_8xy1(const std::uint16_t& opcode);
-    void op_8xy2(const std::uint16_t& opcode);
-    void op_8xy3(const std::uint16_t& opcode);
-    void op_8xy4(const std::uint16_t& opcode);
-    void op_8xy5(const std::uint16_t& opcode);
-    void op_8xy6(const std::uint16_t& opcode);
-    void op_8xy7(const std::uint16_t& opcode);
-    void op_8xyE(const std::uint16_t& opcode);
-    void op_9xy0(const std::uint16_t& opcode);
-    void op_Annn(const std::uint16_t& opcode);
-    void op_Bnnn(const std::uint16_t& opcode);
-    void op_Cxkk(const std::uint16_t& opcode);
-    void op_Dxyn(const std::uint16_t& opcode);
-    void op_Ex9E(const std::uint16_t& opcode);
-    void op_ExA1(const std::uint16_t& opcode);
-    void op_Fx07(const std::uint16_t& opcode);
-    void op_Fx0A(const std::uint16_t& opcode);
-    void op_Fx15(const std::uint16_t& opcode);
-    void op_Fx18(const std::uint16_t& opcode);
-    void op_Fx1E(const std::uint16_t& opcode);
-    void op_Fx29(const std::uint16_t& opcode);
-    void op_Fx33(const std::uint16_t& opcode);
-    void op_Fx55(const std::uint16_t& opcode);
-    void op_Fx65(const std::uint16_t& opcode);
+    void op_arr_0(std::uint16_t opcode);
+    void op_arr_8(std::uint16_t opcode);
+    void op_arr_E(std::uint16_t opcode);
+    void op_arr_F(std::uint16_t opcode);
+    void op_null(std::uint16_t opcode);
+    void op_00E0(std::uint16_t opcode);
+    void op_00EE(std::uint16_t opcode);
+    void op_1nnn(std::uint16_t opcode);
+    void op_2nnn(std::uint16_t opcode);
+    void op_3xkk(std::uint16_t opcode);
+    void op_4xkk(std::uint16_t opcode);
+    void op_5xy0(std::uint16_t opcode);
+    void op_6xkk(std::uint16_t opcode);
+    void op_7xkk(std::uint16_t opcode);
+    void op_8xy0(std::uint16_t opcode);
+    void op_8xy1(std::uint16_t opcode);
+    void op_8xy2(std::uint16_t opcode);
+    void op_8xy3(std::uint16_t opcode);
+    void op_8xy4(std::uint16_t opcode);
+    void op_8xy5(std::uint16_t opcode);
+    void op_8xy6(std::uint16_t opcode);
+    void op_8xy7(std::uint16_t opcode);
+    void op_8xyE(std::uint16_t opcode);
+    void op_9xy0(std::uint16_t opcode);
+    void op_Annn(std::uint16_t opcode);
+    void op_Bnnn(std::uint16_t opcode);
+    void op_Cxkk(std::uint16_t opcode);
+    void op_Dxyn(std::uint16_t opcode);
+    void op_Ex9E(std::uint16_t opcode);
+    void op_ExA1(std::uint16_t opcode);
+    void op_Fx07(std::uint16_t opcode);
+    void op_Fx0A(std::uint16_t opcode);
+    void op_Fx15(std::uint16_t opcode);
+    void op_Fx18(std::uint16_t opcode);
+    void op_Fx1E(std::uint16_t opcode);
+    void op_Fx29(std::uint16_t opcode);
+    void op_Fx33(std::uint16_t opcode);
+    void op_Fx55(std::uint16_t opcode);
+    void op_Fx65(std::uint16_t opcode);
 
-    void op_Bxnn_CHIP48(const std::uint16_t& opcode);
-    void op_8xy6_CHIP48(const std::uint16_t& opcode);
-    void op_8xyE_CHIP48(const std::uint16_t& opcode);
-    void op_Fx55_CHIP48(const std::uint16_t& opcode);
-    void op_Fx65_CHIP48(const std::uint16_t& opcode);
-    void op_Fx55_SCHIP(const std::uint16_t& opcode);
-    void op_Fx65_SCHIP(const std::uint16_t& opcode);
+    void op_Bxnn_CHIP48(std::uint16_t opcode);
+    void op_8xy6_CHIP48(std::uint16_t opcode);
+    void op_8xyE_CHIP48(std::uint16_t opcode);
+    void op_Fx55_CHIP48(std::uint16_t opcode);
+    void op_Fx65_CHIP48(std::uint16_t opcode);
+    void op_Fx55_SCHIP(std::uint16_t opcode);
+    void op_Fx65_SCHIP(std::uint16_t opcode);
 
     std::array<op_t, 0xF + 1> OP_ARR_MAIN = [] consteval {
         auto OP_ARR = decltype(OP_ARR_MAIN) {};
