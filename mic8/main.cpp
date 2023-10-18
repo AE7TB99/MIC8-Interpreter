@@ -43,10 +43,11 @@ namespace {
         VIEW_COUNT
     };
 
-    std::vector<std::tuple<chip8, std::string, GLuint, ImGuiFileDialog, MemoryEditor, unsigned char, bool, bool, bool, std::deque<std::string>, unsigned char, std::array<bool, VIEW_COUNT>>> instances {};
+    //not sure if std::vector<std::unique_ptr<...>> would be better...
+    std::deque<std::tuple<chip8, std::string, GLuint, ImGuiFileDialog, MemoryEditor, unsigned char, bool, bool, bool, std::deque<std::string>, unsigned char, std::array<bool, VIEW_COUNT>>> instances {};
 
-    decltype(instances.data()) input_p1 {nullptr};
-    decltype(instances.data()) input_p2 {nullptr};
+    decltype(&instances[0]) input_p1 {nullptr};
+    decltype(&instances[0]) input_p2 {nullptr};
 
     unsigned char input_count {0};
 
