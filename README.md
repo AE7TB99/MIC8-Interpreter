@@ -6,17 +6,22 @@ Some inessential features are currently not implemented.
 
 ## Dependencies
 
-You will need GLFW (http://www.glfw.org)
+You will need GLFW on your system. (http://www.glfw.org)
 
 Linux:
+
 ```bash
 apt-get install libglfw-dev
 ```
+
 Mac OS X:
+
 ```bash
 brew install glfw
 ```
+
 MSYS2:
+
 ```bash
 pacman -S --noconfirm --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-glfw
 ```
