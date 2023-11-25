@@ -27,8 +27,8 @@ SOURCES += $(FILE_DIALOG_DIR)/ImGuiFileDialog.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
-CXXFLAGS = -std=c++2b -I$(SRC_DIR) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_DIR) -I$(MEMORY_EDITOR_DIR) 
-CXXFLAGS += -g -Wall -Wformat -O0
+CXXFLAGS = -std=c++23 -I$(SRC_DIR) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_DIR) -I$(MEMORY_EDITOR_DIR)
+CXXFLAGS += -g -Wall -Wformat -O3
 LIBS =
 
 ##---------------------------------------------------------------------

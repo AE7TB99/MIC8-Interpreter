@@ -17,7 +17,6 @@
 #include <GLFW/glfw3.h>
 
 namespace {
-
     enum member_index : unsigned char {
         INTERPRETER,
         ID,
@@ -44,12 +43,13 @@ namespace {
     };
 
     //not sure if std::vector<std::unique_ptr<...>> would be better...
-    std::deque<std::tuple<chip8, std::string, GLuint, ImGuiFileDialog, MemoryEditor, unsigned char, bool, bool, bool, std::deque<std::string>, unsigned char, std::array<bool, VIEW_COUNT>>> instances {};
+    std::deque<std::tuple<chip8, std::string, GLuint, ImGuiFileDialog, MemoryEditor, unsigned char, bool, bool, bool, std::deque<std::string>, unsigned char, std::array<bool,
+        VIEW_COUNT>>> instances{};
 
-    decltype(&instances[0]) input_p1 {nullptr};
-    decltype(&instances[0]) input_p2 {nullptr};
+    decltype(&instances[0]) input_p1{nullptr};
+    decltype(&instances[0]) input_p2{nullptr};
 
-    unsigned char input_count {0};
+    unsigned char input_count{0};
 
     //@formatter:off
     std::array<ImGuiKey, 16> keypad_1 {
@@ -94,20 +94,21 @@ namespace {
     auto instance_search() -> unsigned char {
         std::size_t l = 0, r = instances.size();
         while (l < r) {
-            auto m = l + (r - l) / 2;
+            const auto m = l + (r - l) / 2;
             auto& n = std::get<ID>(instances[m]);
             std::uint8_t m_val;
             try {
                 m_val = std::stoi(n);
-            } catch (const std::invalid_argument& e) {
+            }
+            catch (const std::invalid_argument& e) {
                 ++l;
                 continue;
             } catch (const std::out_of_range& e) {
                 ++l;
                 continue;
             }
-            if (m_val == m) l = m + 1;
-            else r = m;
+            if (m_val == m) { l = m + 1; }
+            else { r = m; }
         }
         return l;
     }
@@ -130,44 +131,44 @@ namespace {
             case 1:
                 input_p2 = &instance;
                 break;
-            default: //this should never happen
+            default: break; //this should never happen
         }
         ++input_count;
     }
 
-    void remove_input(decltype(instances)::value_type& instance) {
+    void remove_input(const decltype(instances)::value_type& instance) {
         switch (input_count) {
             case 1:
                 input_p1 = nullptr;
                 input_p2 = nullptr;
                 break;
             case 2:
-                if (input_p1 == &instance) input_p1 = input_p2;
+                if (input_p1 == &instance) { input_p1 = input_p2; }
                 input_p2 = nullptr;
                 break;
-            default: //this should never happen
+            default: break; //this should never happen
         }
         --input_count;
     }
 
-    void glfw_error_callback(int code, const char* description) {
+    void glfw_error_callback(const int code, const char* description) {
         fprintf(stderr, "GLFW Error %d: %s\n", code, description);
     }
 }
 
 auto main() -> int {
     glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit()) return 1;
+    if (glfwInit() == GLFW_FALSE) { return 1; }
 
     GLFWwindow* window = glfwCreateWindow(1280, 720, "MIC8 Interpreter", nullptr, nullptr);
-    if (window == nullptr) return 1;
+    if (window == nullptr) { return 1; }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    (void) io;
+    (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     ImGui::StyleColorsDark();
@@ -177,11 +178,11 @@ auto main() -> int {
 
     ImVec4 clear_color = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
 
-    bool creation_popup {false};
+    bool creation_popup{false};
 
     unsigned char op_log_default_size = 20;
 
-    while (!glfwWindowShouldClose(window)) {
+    while (glfwWindowShouldClose(window) == 0) {
         glfwPollEvents();
 
         ImGui_ImplOpenGL2_NewFrame();
@@ -190,14 +191,15 @@ auto main() -> int {
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Instances")) {
-                if (ImGui::MenuItem("Create New Instance")) creation_popup = true;
+                if (ImGui::MenuItem("Create New Instance")) { creation_popup = true; }
                 if (ImGui::BeginMenu("Delete Instances")) {
                     for (auto it = instances.begin(); it != instances.end();) {
                         if (ImGui::MenuItem(("Delete Instance " + std::get<ID>(*it)).c_str())) {
-                            if (std::get<INPUT>(*it)) --input_count;
-                            if (it == --instances.end()) instances.erase(it);
-                            else instances.erase(it++);
-                        } else ++it;
+                            if (std::get<INPUT>(*it)) { --input_count; }
+                            if (it == --instances.end()) { instances.erase(it); }
+                            else { instances.erase(it++); }
+                        }
+                        else { ++it; }
                     }
                     ImGui::EndMenu();
                 }
@@ -205,37 +207,43 @@ auto main() -> int {
             }
             if (ImGui::BeginMenu("Views")) {
                 if (ImGui::BeginMenu("Controllers")) {
-                    for (auto& instance: instances)
+                    for (auto& instance: instances) {
                         ImGui::MenuItem(("Controller " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_CONTROLLER]);
+                    }
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Frame Buffers")) {
-                    for (auto& instance: instances)
+                    for (auto& instance: instances) {
                         ImGui::MenuItem(("Frame Buffer " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_FB]);
+                    }
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Memory Viewers")) {
-                    for (auto& instance: instances)
+                    for (auto& instance: instances) {
                         ImGui::MenuItem(("Memory View " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_MEM_VIEW]);
+                    }
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("CPU viewers")) {
-                    for (auto& instance: instances)
+                    for (auto& instance: instances) {
                         ImGui::MenuItem(("CPU View " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_CPU_VIEW]);
+                    }
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Logs")) {
-                    for (auto& instance: instances)
+                    for (auto& instance: instances) {
                         ImGui::MenuItem(("Log " + std::get<ID>(instance)).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_OP_LOG]);
+                    }
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("ROMS")) {
                 for (auto& instance: instances) {
-                    const std::string& id = std::get<ID>(instance);
-                    if (ImGui::MenuItem(("Load ROM into instance " + id).c_str(), nullptr, &std::get<VIEWS>(instance)[SHOW_FILE_DLG]))
+                    if (const std::string& id = std::get<ID>(instance); ImGui::MenuItem(("Load ROM into instance " + id).c_str(), nullptr,
+                                                                                        &std::get<VIEWS>(instance)[SHOW_FILE_DLG])) {
                         std::get<FILE_DLG>(instance).OpenDialog("dlg_key_" + id, "Load ROM into instance " + id, ".ch8", "./roms/");
+                    }
                 }
                 ImGui::EndMenu();
             }
@@ -245,31 +253,36 @@ auto main() -> int {
                     bool& input = std::get<INPUT>(instance);
                     if (input_count < 2) {
                         if (ImGui::MenuItem(("Toggle input for instance " + id).c_str(), nullptr, &input)) {
-                            if (input) add_input(instance);
-                            else remove_input(instance);
+                            if (input) { add_input(instance); }
+                            else { remove_input(instance); }
                         }
-                    } else if (input) {
-                        if (ImGui::MenuItem(("Toggle input for instance " + id).c_str(), nullptr, &input)) remove_input(instance);
+                    }
+                    else if (input) {
+                        if (ImGui::MenuItem(("Toggle input for instance " + id).c_str(), nullptr, &input)) { remove_input(instance); }
                     }
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::MenuItem("EXIT")) glfwSetWindowShouldClose(window, true);
+            if (ImGui::MenuItem("EXIT")) { glfwSetWindowShouldClose(window, 1); }
             ImGui::EndMainMenuBar();
         }
 
         if (creation_popup) {
-            ImGui::SetNextWindowSize(ImVec2(245, 213));
+            ImGui::SetNextWindowSize(ImVec2(245, 223));
             ImGui::OpenPopup("Create Instance");
             creation_popup = false;
         }
         if (ImGui::BeginPopupModal("Create Instance", nullptr, ImGuiWindowFlags_NoResize)) {
             const unsigned char pos = instance_search();
-            static bool chip48_jmp {false};
-            static bool chip48_shf {true};
-            static chip8::ls_mode mode {chip8::ls_mode::chip48_ls};
+            static bool vip_alu{false};
+            static bool chip48_jmp{false};
+            static bool chip48_shf{true};
+            static chip8::ls_mode mode{chip8::ls_mode::chip48_ls};
 
             ImGui::SeparatorText("Alternative Instructions");
+            ImGui::Checkbox("COSMAC VIP Logic", &vip_alu);
+            ImGui::SameLine();
+            help_marker("8XY1 / 8XY2 / 8XY3 set VF to 0");
             ImGui::Checkbox("CHIP48 Jump", &chip48_jmp);
             ImGui::SameLine();
             help_marker("BNNN is replaced by BXNN, which jumps to address XNN + the value in VX (instead of address NNN + the value in V0)");
@@ -277,16 +290,17 @@ auto main() -> int {
             ImGui::SameLine();
             help_marker("8XY6 / 8XYE shift VX and ignore VY");
             ImGui::Separator();
-            if (ImGui::RadioButton("CHIP8 Load/Store", mode == chip8::ls_mode::chip8_ls)) mode = chip8::ls_mode::chip8_ls;
-            if (ImGui::RadioButton("CHIP48 Load/Store", mode == chip8::ls_mode::chip48_ls)) mode = chip8::ls_mode::chip48_ls;
+            if (ImGui::RadioButton("CHIP8 Load/Store", mode == chip8::ls_mode::chip8_ls)) { mode = chip8::ls_mode::chip8_ls; }
+            if (ImGui::RadioButton("CHIP48 Load/Store", mode == chip8::ls_mode::chip48_ls)) { mode = chip8::ls_mode::chip48_ls; }
             ImGui::SameLine();
             help_marker("FX55 / FX65 increment I by one less than they should (if X is 0, I is not incremented at all)");
-            if (ImGui::RadioButton("SUPER-CHIP 1.1 Load/Store", mode == chip8::ls_mode::schip_ls)) mode = chip8::ls_mode::schip_ls;
+            if (ImGui::RadioButton("SUPER-CHIP 1.1 Load/Store", mode == chip8::ls_mode::schip11_ls)) { mode = chip8::ls_mode::schip11_ls; }
             ImGui::SameLine();
             help_marker("FX55 / FX65 no longer increment I at all");
             ImGui::Separator();
             if (ImGui::Button("Cancel")) {
                 ImGui::CloseCurrentPopup();
+                vip_alu = false;
                 chip48_jmp = false;
                 chip48_shf = true;
                 mode = chip8::ls_mode::chip48_ls;
@@ -310,9 +324,12 @@ auto main() -> int {
                 mem_editor.ReadOnly = true;
 
                 instances.insert(instances.begin() + pos,
-                                 {chip8(chip48_jmp, chip48_shf, mode), std::to_string(pos), texture_id, ImGuiFileDialog(), mem_editor, 0, false,
-                                  false, false, std::deque<std::string> {}, op_log_default_size, std::array<bool, VIEW_COUNT> {}});
+                                 {
+                                     chip8(vip_alu, chip48_jmp, chip48_shf, mode), std::to_string(pos), texture_id, ImGuiFileDialog(), mem_editor, 0, false,
+                                     false, false, std::deque<std::string>{}, op_log_default_size, std::array<bool, VIEW_COUNT>{true, false, true, true, true, true}
+                                 });
                 ImGui::CloseCurrentPopup();
+                vip_alu = false;
                 chip48_jmp = false;
                 chip48_shf = true;
                 mode = chip8::ls_mode::chip48_ls;
@@ -337,45 +354,47 @@ auto main() -> int {
                 for (unsigned char i = 0; i < ipf; ++i) {
                     interpreter.run_cycle();
                     if (op_log_max != 0) {
-                        while (op_log.size() >= op_log_max) op_log.pop_front();
-                        op_log.emplace_back(interpreter.get_instruction().data());
-                    } else op_log.clear();
+                        while (op_log.size() >= op_log_max) { op_log.pop_front(); }
+                        op_log.emplace_back(interpreter.get_instruction());
+                    }
+                    else { op_log.clear(); }
                 }
                 interpreter.decrement_timers();
             }
             if (input_p1 != nullptr) {
-                for (decltype(keypad_1)::size_type i = 0uz; i < keypad_1.size(); ++i) {
+                for (decltype(keypad_1)::size_type i = 0; i < keypad_1.size(); ++i) {
                     std::get<INTERPRETER>(*input_p1).keys[i] = ImGui::IsKeyDown(keypad_1[i]);
                 }
             }
             if (input_p2 != nullptr) {
-                for (decltype(keypad_2)::size_type i = 0uz; i < keypad_2.size(); ++i) {
+                for (decltype(keypad_2)::size_type i = 0; i < keypad_2.size(); ++i) {
                     std::get<INTERPRETER>(*input_p2).keys[i] = ImGui::IsKeyDown(keypad_2[i]);
                 }
             }
             if (views[SHOW_CONTROLLER]) {
                 ImGui::SetNextWindowSize(ImVec2(355, 111), ImGuiCond_Once);
                 if (ImGui::Begin(("controller " + id).c_str(), &views[SHOW_CONTROLLER])) {
-                    const unsigned char min = 0;
-                    const unsigned char max = 30;
+                    constexpr unsigned char min = 0;
+                    constexpr unsigned char max = 30;
                     ImGui::SliderScalar("Emulation speed", ImGuiDataType_U8, &ipf, &min, &max, "%u ipf");
                     const auto ipf_running = running ? ipf : 0;
                     ImGui::Text("IPF: %u", ipf_running);
                     ImGui::Text("IPS: %f", static_cast<float>(ipf_running) * io.Framerate);
-                    ImGui::BeginDisabled(!loaded);
-                    {
+                    ImGui::BeginDisabled(!loaded); {
                         if (running) {
-                            if (ImGui::Button("Stop")) running = false;
-                        } else {
-                            if (ImGui::Button("Run")) running = true;
+                            if (ImGui::Button("Stop")) { running = false; }
+                        }
+                        else {
+                            if (ImGui::Button("Run")) { running = true; }
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Step")) {
                             interpreter.run_cycle();
                             if (op_log_max != 0) {
-                                while (op_log.size() >= op_log_max) op_log.pop_front();
-                                op_log.emplace_back(interpreter.get_instruction().data());
-                            } else op_log.clear();
+                                while (op_log.size() >= op_log_max) { op_log.pop_front(); }
+                                op_log.emplace_back(interpreter.get_instruction());
+                            }
+                            else { op_log.clear(); }
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Reset")) {
@@ -419,10 +438,10 @@ auto main() -> int {
 
                 ImGui::SetNextWindowSizeConstraints(ImVec2(chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT + ImGui::GetFrameHeight()),
                                                     ImVec2(FLT_MAX, FLT_MAX), [](ImGuiSizeCallbackData* data) {
-                            data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
-                        });
+                                                        data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
+                                                    });
                 if (ImGui::Begin(("frame_buffer " + id).c_str(), &views[SHOW_FB])) {
-                    ImGui::Image((void*) (intptr_t) tex_id, ImGui::GetContentRegionAvail());
+                    ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(tex_id)), ImGui::GetContentRegionAvail()); // NOLINT(*-pro-type-reinterpret-cast)
                 }
                 ImGui::End();
             }
@@ -449,15 +468,17 @@ auto main() -> int {
                         ImGui::TableHeadersRow();
                         for (unsigned char i = 0; const auto& addr: interpreter.get_stack()) {
                             ImGui::TableNextColumn();
-                            if (!addr) {
+                            if (addr != 0) {
                                 ImGui::TextDisabled("%x", i);
                                 ImGui::TableNextColumn();
                                 ImGui::TextDisabled("%04x", addr);
-                            } else if (interpreter.get_sp() != i) {
+                            }
+                            else if (interpreter.get_sp() != i) {
                                 ImGui::Text("%x", i);
                                 ImGui::TableNextColumn();
                                 ImGui::Text("%04x", addr);
-                            } else {
+                            }
+                            else {
                                 ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));
                                 ImGui::Text("%x", i);
                                 ImGui::TableNextColumn();
@@ -482,23 +503,25 @@ auto main() -> int {
                 if (ImGui::Begin(("mem_view " + id).c_str(), &views[SHOW_MEM_VIEW])) {
                     mem_edit.HighlightMin = interpreter.get_pc();
                     mem_edit.HighlightMax = interpreter.get_pc() + chip8::INSTRUCTION_SIZE;
-                    mem_edit.DrawContents((void*) interpreter.get_mem().data(), chip8::MEM_SIZE);
+                    mem_edit.DrawContents((void*)interpreter.get_mem().data(), chip8::MEM_SIZE);
                 }
                 ImGui::End();
             }
             if (views[SHOW_OP_LOG]) {
-                ImGui::SetNextWindowSize(ImVec2(240, static_cast<float>(58 + op_log_max * 17)), ImGuiCond_Always);
+                ImGui::SetNextWindowSize(ImVec2(250, static_cast<float>(58 + op_log_max * 17)), ImGuiCond_Always);
                 if (ImGui::Begin(("op_log " + id).c_str())) {
-                    const unsigned char buf_size = 2 + 1;
-                    char buf[buf_size];
-                    snprintf(buf, buf_size, "%u", op_log_max);
+                    constexpr unsigned char buf_size = 2 + 1;
+                    //char buf[buf_size];
+                    std::array<char, buf_size> buf{};
+                    snprintf(buf.data(), buf_size, "%u", op_log_max);
                     ImGui::PushItemWidth(22);
-                    ImGui::InputText("Number of shown instructions", buf, buf_size);
+                    ImGui::InputText("Number of shown instructions", buf.data(), buf_size);
                     ImGui::PopItemWidth();
                     ImGui::Separator();
                     try {
-                        op_log_max = std::stoi(buf);
-                    } catch (const std::invalid_argument& e) {
+                        op_log_max = std::stoi(buf.data());
+                    }
+                    catch (const std::invalid_argument& e) {
                         op_log_max = op_log_default_size;
                     } catch (const std::out_of_range& e) {
                         op_log_max = op_log_default_size;

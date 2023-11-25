@@ -11,7 +11,7 @@ You will need GLFW on your system. (http://www.glfw.org)
 Linux:
 
 ```bash
-apt-get install libglfw-dev
+apt-get install libglfw3-dev
 ```
 
 Mac OS X:
