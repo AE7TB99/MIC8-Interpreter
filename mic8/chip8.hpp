@@ -38,23 +38,14 @@ public:
     void unload_rom();
 
     [[nodiscard]] constexpr auto get_mem() const -> std::span<const std::uint8_t> { return mem; }
-
     [[nodiscard]] constexpr auto get_fb() const -> std::span<const std::uint32_t> { return fb; }
-
     [[nodiscard]] constexpr auto get_stack() const -> std::span<const std::uint16_t> { return stack; }
-
     [[nodiscard]] constexpr auto get_reg() const -> std::span<const std::uint8_t> { return reg; }
-
     [[nodiscard]] constexpr auto get_instruction() const -> std::string_view { return instruction; }
-
     [[nodiscard]] constexpr auto get_pc() const -> std::uint16_t { return pc; }
-
     [[nodiscard]] constexpr auto get_ir() const -> std::uint16_t { return ir; }
-
     [[nodiscard]] constexpr auto get_sp() const -> std::uint8_t { return sp; }
-
     [[nodiscard]] constexpr auto get_dt() const -> std::uint8_t { return dt; }
-
     [[nodiscard]] constexpr auto get_st() const -> std::uint8_t { return st; }
 
 private:
@@ -102,6 +93,7 @@ private:
     void op_arr_8(std::uint16_t opcode);
     void op_arr_E(std::uint16_t opcode);
     void op_arr_F(std::uint16_t opcode);
+
     void op_null(std::uint16_t opcode);
     void op_00E0(std::uint16_t opcode);
     void op_00EE(std::uint16_t opcode);

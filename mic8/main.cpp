@@ -468,21 +468,21 @@ auto main() -> int {
                         ImGui::TableHeadersRow();
                         for (unsigned char i = 0; const auto& addr: interpreter.get_stack()) {
                             ImGui::TableNextColumn();
-                            if (addr != 0) {
-                                ImGui::TextDisabled("%x", i);
+                            if (i < interpreter.get_sp() - 1) {
+                                ImGui::Text("%d", i);
                                 ImGui::TableNextColumn();
-                                ImGui::TextDisabled("%04x", addr);
+                                ImGui::Text("%04x", addr);
                             }
-                            else if (interpreter.get_sp() != i) {
-                                ImGui::Text("%x", i);
+                            else if (i == interpreter.get_sp() - 1) {
+                                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));
+                                ImGui::Text("%d", i);
                                 ImGui::TableNextColumn();
                                 ImGui::Text("%04x", addr);
                             }
                             else {
-                                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));
-                                ImGui::Text("%x", i);
+                                ImGui::TextDisabled("%d", i);
                                 ImGui::TableNextColumn();
-                                ImGui::Text("%04x", addr);
+                                ImGui::TextDisabled("%04x", addr);
                             }
                             ++i;
                         }

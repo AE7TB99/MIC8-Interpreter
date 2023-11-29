@@ -261,18 +261,17 @@ void chip8::op_Dxyn(const std::uint16_t opcode) {
     const std::uint8_t y = (opcode & 0x00F0u) >> 4u;
     const std::uint8_t n = opcode & 0x000Fu;
     instruction = std::format("0x{:X} - {:X} -> sprite v{:X} v{:X} {}", pc, opcode, x, y, n);
-    const std::uint8_t x_pos = reg[x] % VIDEO_WIDTH;
-    const std::uint8_t y_pos = reg[y] % VIDEO_HEIGHT;
-    for (unsigned char y_line = 0; y_line < n; ++y_line) {
-        if (y_pos + y_line >= VIDEO_HEIGHT) { break; }
-        const std::uint8_t pixels = mem[ir + y_line];
-        for (unsigned char x_line = 0; x_line < 8; ++x_line) {
-            if (x_pos + x_line >= VIDEO_WIDTH) { continue; }
-            if ((pixels & 0b1000'0000u >> x_line) != 0) {
-                const std::uint16_t pos = x_pos + x_line + (y_pos + y_line) * VIDEO_WIDTH;
-                reg[0xF] = static_cast<std::uint8_t>(fb[pos] == 0xFFFF'FFFFu);
-                fb[pos] ^= 0xFFFF'FFFFu;
-            }
+    const std::uint8_t x_pos = reg[x] & VIDEO_WIDTH - 1;
+    const std::uint8_t y_pos = reg[y] & VIDEO_HEIGHT - 1;
+    for (unsigned char row = 0; row < n; ++row) {
+        if (row + y_pos >= VIDEO_HEIGHT) { break; }
+        const std::uint8_t pixels = mem[ir + row];
+        for (unsigned char col = 0; col < 8; ++col) {
+            if (col + x_pos >= VIDEO_WIDTH) { break; }
+            if ((pixels & 0b1000'0000u >> col) == 0) { continue; }
+            const std::uint16_t px_pox = x_pos + col + (y_pos + row) * VIDEO_WIDTH;
+            reg[0xF] = static_cast<std::uint8_t>(fb[px_pox] == 0xFFFF'FFFF);
+            fb[px_pox] ^= 0xFFFF'FFFFu;
         }
     }
     draw_flag = true;
@@ -308,6 +307,7 @@ void chip8::op_Fx0A(const std::uint16_t opcode) {
     }
     if (!set) { pc -= INSTRUCTION_SIZE; }
     else {
+        // TODO: fix instruction
     }
 }
 
