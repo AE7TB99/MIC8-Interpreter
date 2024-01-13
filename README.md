@@ -1,3 +1,12 @@
+<table class="alert-warn">
+<tr>
+    <td> 🚧️ </td>
+    <td>
+        <b>A major rewrite is currently in progress!</b>
+    </td>
+</tr>
+</table>
+
 # MIC8-Interpreter
 
 A multi-instance CHIP-8 interpreter written in C++.
