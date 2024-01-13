@@ -14,8 +14,8 @@
 #CXX = g++
 CXX = clang++
 
-EXE = mici
-#EXE = mic8.elf
+
+EXE = mic8.elf
 SRC_DIR = ./mic8
 IMGUI_DIR = ./imgui
 FILE_DIALOG_DIR = ./ImGuiFileDialog
