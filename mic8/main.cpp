@@ -225,7 +225,7 @@ auto main() -> int {
                 for (auto& instance: instances) {
                     if (const auto& id = std::to_string(instance.id); ImGui::MenuItem(("Load ROM into instance " + id).c_str(), nullptr,
                                                                                       &instance.show_file_dlg)) {
-                        instance.file_dlg.OpenDialog("dlg_key_" + id, "Load ROM into instance " + id, ".ch8", "./roms/");
+                        instance.file_dlg.OpenDialog("dlg_key_" + id, "Load ROM into instance " + id, ".ch8", "./chip8Archive/roms/");
                     }
                 }
                 ImGui::EndMenu();
