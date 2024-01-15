@@ -6,7 +6,9 @@
 #include <limits>
 #include <string_view>
 
-chip8::chip8(const bool vip_alu, bool chip48_jmp, const bool chip48_shf, const ls_mode mode) {
+chip8::chip8() = default;
+
+chip8::chip8(const bool vip_alu, const bool chip48_jmp, const bool chip48_shf, const ls_mode mode) {
     if (vip_alu) {
         OP_ARR_8[0x1] = &chip8::op_8xy1_VIP;
         OP_ARR_8[0x2] = &chip8::op_8xy2_VIP;
@@ -86,11 +88,8 @@ void chip8::unload_rom() {
 }
 
 void chip8::op_arr_0(const std::uint16_t opcode) { (this->*OP_ARR_0[opcode & 0x00FFu])(opcode); }
-
 void chip8::op_arr_8(const std::uint16_t opcode) { (this->*OP_ARR_8[opcode & 0x000Fu])(opcode); }
-
 void chip8::op_arr_E(const std::uint16_t opcode) { (this->*OP_ARR_E[opcode & 0x000Fu])(opcode); }
-
 void chip8::op_arr_F(const std::uint16_t opcode) { (this->*OP_ARR_F[opcode & 0x00FFu])(opcode); }
 
 void chip8::op_null(const std::uint16_t opcode) {

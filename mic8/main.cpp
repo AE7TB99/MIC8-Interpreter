@@ -12,89 +12,11 @@
 #define GL_CLAMP_TO_EDGE 0x812F
 #endif
 
+#include "instance.hpp"
+#include <string>
 #include <GLFW/glfw3.h>
 
 namespace {
-    struct instance {
-        chip8 interpreter;
-        unsigned id;
-        GLuint tex_id;
-        ImGuiFileDialog file_dlg;
-        MemoryEditor mem_edit;
-        unsigned char ipf;
-        bool running;
-        bool loaded;
-        bool input;
-        std::deque<std::string> op_log;
-        unsigned char op_log_max;
-
-        bool show_controller;
-        bool show_file_dlg;
-        bool show_fb;
-        bool show_cpu_view;
-        bool show_mem_view;
-        bool show_op_log;
-    };
-
-    std::deque<instance> instances {};
-
-    decltype(&instances[0]) input_p1 {nullptr};
-    decltype(&instances[0]) input_p2 {nullptr};
-
-    unsigned char input_count {0};
-
-    //@formatter:off
-    std::array<ImGuiKey, 16> keypad_1 {
-        ImGuiKey_X,
-        ImGuiKey_1,
-        ImGuiKey_2,
-        ImGuiKey_3,
-        ImGuiKey_Q,
-        ImGuiKey_W,
-        ImGuiKey_E,
-        ImGuiKey_A,
-        ImGuiKey_S,
-        ImGuiKey_D,
-        ImGuiKey_Z,
-        ImGuiKey_C,
-        ImGuiKey_4,
-        ImGuiKey_R,
-        ImGuiKey_F,
-        ImGuiKey_V
-    };
-
-    std::array<ImGuiKey, 16> keypad_2 {
-        ImGuiKey_Comma,
-        ImGuiKey_7,
-        ImGuiKey_8,
-        ImGuiKey_9,
-        ImGuiKey_U,
-        ImGuiKey_I,
-        ImGuiKey_O,
-        ImGuiKey_J,
-        ImGuiKey_K,
-        ImGuiKey_L,
-        ImGuiKey_M,
-        ImGuiKey_Period,
-        ImGuiKey_0,
-        ImGuiKey_P,
-        ImGuiKey_Semicolon,
-        ImGuiKey_Slash
-    };
-    //@formatter:on
-
-    auto instance_search() -> unsigned char {
-        std::size_t l = 0, r = instances.size();
-        while (l < r) {
-            const auto m = l + (r - l) / 2;
-            auto& n = instances[m].id;
-            std::uint8_t m_val = n;
-            if (m_val == m) { l = m + 1; }
-            else { r = m; }
-        }
-        return l;
-    }
-
     void help_marker(const char* desc) {
         ImGui::TextDisabled("(?)");
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && ImGui::BeginTooltip()) {
@@ -103,36 +25,6 @@ namespace {
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
-    }
-
-    void add_input(decltype(instances)::value_type& instance) {
-        switch (input_count) {
-            case 0:
-                input_p1 = &instance;
-                break;
-            case 1:
-                input_p2 = &instance;
-                break;
-            default:
-                break; //this should never happen
-        }
-        ++input_count;
-    }
-
-    void remove_input(const decltype(instances)::value_type& instance) {
-        switch (input_count) {
-            case 1:
-                input_p1 = nullptr;
-                input_p2 = nullptr;
-                break;
-            case 2:
-                if (input_p1 == &instance) { input_p1 = input_p2; }
-                input_p2 = nullptr;
-                break;
-            default:
-                break; //this should never happen
-        }
-        --input_count;
     }
 
     void glfw_error_callback(const int code, const char* description) {
@@ -160,9 +52,30 @@ auto main() -> int {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL2_Init();
 
-    ImVec4 clear_color = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    constexpr auto clear_color = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    struct instance {
+        chip8 interpreter;
+        unsigned id = 0;
+        GLuint tex_id;
+        ImGuiFileDialog file_dlg;
+        MemoryEditor mem_edit;
+        unsigned char ipf;
+        bool running;
+        bool loaded;
+        bool input_enabled;
+        std::deque<std::string> op_log;
+        unsigned char op_log_max;
 
-    bool creation_popup {false};
+        bool show_controller;
+        bool show_file_dlg;
+        bool show_fb;
+        bool show_cpu_view;
+        bool show_mem_view;
+        bool show_op_log;
+    };
+    std::deque<instance> instances{};
+
+    bool creation_popup{false};
 
     unsigned char op_log_default_size = 20;
 
@@ -179,10 +92,10 @@ auto main() -> int {
                 if (ImGui::BeginMenu("Delete Instances")) {
                     for (auto it = instances.begin(); it != instances.end();) {
                         if (ImGui::MenuItem(("Delete Instance " + std::to_string(it->id)).c_str())) {
-                            if (it->input) { --input_count; }
-                            if (it == --instances.end()) { instances.erase(it); }
-                            else { instances.erase(it++); }
-                        } else { ++it; }
+                            // if (it == --instances.end()) { instances.erase(it); }
+                            // else { instances.erase(it++); }
+                        }
+                        else { ++it; }
                     }
                     ImGui::EndMenu();
                 }
@@ -222,27 +135,18 @@ auto main() -> int {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("ROMS")) {
+                IGFD::FileDialogConfig config;
+                config.path = "./chip8Archive/roms/";
                 for (auto& instance: instances) {
                     if (const auto& id = std::to_string(instance.id); ImGui::MenuItem(("Load ROM into instance " + id).c_str(), nullptr,
                                                                                       &instance.show_file_dlg)) {
-                        instance.file_dlg.OpenDialog("dlg_key_" + id, "Load ROM into instance " + id, ".ch8", "./chip8Archive/roms/");
+                        instance.file_dlg.OpenDialog("dlg_key_" + id, "Load ROM into instance " + id, ".ch8", config);
                     }
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Input")) {
-                for (auto& instance: instances) {
-                    const std::string& id = std::to_string(instance.id);
-                    bool& input = instance.input;
-                    if (input_count < 2) {
-                        if (ImGui::MenuItem(("Toggle input for instance " + id).c_str(), nullptr, &input)) {
-                            if (input) { add_input(instance); }
-                            else { remove_input(instance); }
-                        }
-                    } else if (input) {
-                        if (ImGui::MenuItem(("Toggle input for instance " + id).c_str(), nullptr, &input)) { remove_input(instance); }
-                    }
-                }
+               //TODO: Implement new input method
                 ImGui::EndMenu();
             }
             if (ImGui::MenuItem("EXIT")) { glfwSetWindowShouldClose(window, 1); }
@@ -255,11 +159,19 @@ auto main() -> int {
             creation_popup = false;
         }
         if (ImGui::BeginPopupModal("Create Instance", nullptr, ImGuiWindowFlags_NoResize)) {
-            const unsigned char pos = instance_search();
-            static bool vip_alu {false};
-            static bool chip48_jmp {false};
-            static bool chip48_shf {true};
-            static chip8::ls_mode mode {chip8::ls_mode::chip48_ls};
+            std::size_t l = 0;
+            std::size_t r = instances.size();
+            while (l < r) {
+                const auto m = l + (r - l) / 2;
+                const auto& n = instances[m].id;
+                if (const std::uint8_t m_val = n; m_val == m) { l = m + 1; }
+                else { r = m; }
+            }
+            const unsigned char pos = l;
+            static bool vip_alu{false};
+            static bool chip48_jmp{false};
+            static bool chip48_shf{true};
+            static auto mode{chip8::ls_mode::chip48_ls};
 
             ImGui::SeparatorText("Alternative Instructions");
             ImGui::Checkbox("COSMAC VIP Logic", &vip_alu);
@@ -305,9 +217,10 @@ auto main() -> int {
                 MemoryEditor mem_editor;
                 mem_editor.ReadOnly = true;
 
-                instances.insert(instances.begin() + pos,
-                                 instance {chip8(vip_alu, chip48_jmp, chip48_shf, mode), pos, texture_id, ImGuiFileDialog(), mem_editor, 0, false,
-                                           false, false, std::deque<std::string> {}, op_log_default_size, true, false, true, true, true, true});
+                // instances.insert(instances.begin() + pos, instance{
+                //                      chip8(vip_alu, chip48_jmp, chip48_shf, mode), pos, texture_id, ImGuiFileDialog(), mem_editor, 0, false,
+                //                      false, false, std::deque<std::string>{}, op_log_default_size, true, false, true, true, true, true
+                //                  });
                 ImGui::CloseCurrentPopup();
                 vip_alu = false;
                 chip48_jmp = false;
@@ -345,19 +258,10 @@ auto main() -> int {
                     if (op_log_max != 0) {
                         while (op_log.size() >= op_log_max) { op_log.pop_front(); }
                         op_log.emplace_back(interpreter.get_instruction());
-                    } else { op_log.clear(); }
+                    }
+                    else { op_log.clear(); }
                 }
                 interpreter.decrement_timers();
-            }
-            if (input_p1 != nullptr) {
-                for (decltype(keypad_1)::size_type i = 0; i < keypad_1.size(); ++i) {
-                    input_p1->interpreter.keys[i] = ImGui::IsKeyDown(keypad_1[i]);
-                }
-            }
-            if (input_p2 != nullptr) {
-                for (decltype(keypad_2)::size_type i = 0; i < keypad_2.size(); ++i) {
-                    input_p2->interpreter.keys[i] = ImGui::IsKeyDown(keypad_2[i]);
-                }
             }
             if (show_controller) {
                 ImGui::SetNextWindowSize(ImVec2(355, 111), ImGuiCond_Once);
@@ -368,11 +272,11 @@ auto main() -> int {
                     const auto ipf_running = running ? ipf : 0;
                     ImGui::Text("IPF: %u", ipf_running);
                     ImGui::Text("IPS: %f", static_cast<float>(ipf_running) * io.Framerate);
-                    ImGui::BeginDisabled(!loaded);
-                    {
+                    ImGui::BeginDisabled(!loaded); {
                         if (running) {
                             if (ImGui::Button("Stop")) { running = false; }
-                        } else {
+                        }
+                        else {
                             if (ImGui::Button("Run")) { running = true; }
                         }
                         ImGui::SameLine();
@@ -381,7 +285,8 @@ auto main() -> int {
                             if (op_log_max != 0) {
                                 while (op_log.size() >= op_log_max) { op_log.pop_front(); }
                                 op_log.emplace_back(interpreter.get_instruction());
-                            } else { op_log.clear(); }
+                            }
+                            else { op_log.clear(); }
                         }
                         ImGui::SameLine();
                         if (ImGui::Button("Reset")) {
@@ -425,8 +330,8 @@ auto main() -> int {
 
                 ImGui::SetNextWindowSizeConstraints(ImVec2(chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT + ImGui::GetFrameHeight()),
                                                     ImVec2(FLT_MAX, FLT_MAX), [](ImGuiSizeCallbackData* data) {
-                            data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
-                        });
+                                                        data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
+                                                    });
                 if (ImGui::Begin(("frame_buffer " + id).c_str(), &show_fb)) {
                     ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(tex_id)),
                                  ImGui::GetContentRegionAvail()); // NOLINT(*-pro-type-reinterpret-cast)
@@ -460,12 +365,14 @@ auto main() -> int {
                                 ImGui::Text("%d", i);
                                 ImGui::TableNextColumn();
                                 ImGui::Text("%04x", addr);
-                            } else if (i == interpreter.get_sp() - 1) {
+                            }
+                            else if (i == interpreter.get_sp() - 1) {
                                 ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));
                                 ImGui::Text("%d", i);
                                 ImGui::TableNextColumn();
                                 ImGui::Text("%04x", addr);
-                            } else {
+                            }
+                            else {
                                 ImGui::TextDisabled("%d", i);
                                 ImGui::TableNextColumn();
                                 ImGui::TextDisabled("%04x", addr);
@@ -489,7 +396,7 @@ auto main() -> int {
                 if (ImGui::Begin(("mem_view " + id).c_str(), &show_mem_view)) {
                     mem_edit.HighlightMin = interpreter.get_pc();
                     mem_edit.HighlightMax = interpreter.get_pc() + chip8::INSTRUCTION_SIZE;
-                    mem_edit.DrawContents((void*) interpreter.get_mem().data(), chip8::MEM_SIZE);
+                    mem_edit.DrawContents((void*)interpreter.get_mem().data(), chip8::MEM_SIZE);
                 }
                 ImGui::End();
             }
@@ -498,7 +405,7 @@ auto main() -> int {
                 if (ImGui::Begin(("op_log " + id).c_str())) {
                     constexpr unsigned char buf_size = 2 + 1;
                     //char buf[buf_size];
-                    std::array<char, buf_size> buf {};
+                    std::array<char, buf_size> buf{};
                     snprintf(buf.data(), buf_size, "%u", op_log_max);
                     ImGui::PushItemWidth(22);
                     ImGui::InputText("Number of shown instructions", buf.data(), buf_size);
@@ -506,7 +413,8 @@ auto main() -> int {
                     ImGui::Separator();
                     try {
                         op_log_max = std::stoi(buf.data());
-                    } catch (const std::invalid_argument& e) {
+                    }
+                    catch (const std::invalid_argument& e) {
                         op_log_max = op_log_default_size;
                     } catch (const std::out_of_range& e) {
                         op_log_max = op_log_default_size;
