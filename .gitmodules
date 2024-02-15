@@ -11,3 +11,6 @@
 [submodule "chip8Archive"]
 	path = chip8Archive
 	url = https://github.com/JohnEarnest/chip8Archive
+[submodule "chip8-roms"]
+	path = chip8-roms
+	url = https://github.com/kripod/chip8-roms

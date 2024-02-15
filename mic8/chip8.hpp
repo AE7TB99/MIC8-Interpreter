@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <random>
 #include <span>
+#include <string_view>
 
 class chip8 {
 public:
@@ -20,17 +21,36 @@ public:
     static inline constexpr std::size_t VIDEO_WIDTH{64};
     static inline constexpr std::size_t VIDEO_HEIGHT{32};
 
-    std::array<bool, KEY_COUNT> keys{};
-    bool draw_flag{true};
-
     enum class ls_mode : unsigned char {
         chip8_ls,
         chip48_ls,
         schip11_ls
     };
 
-    chip8();
-    chip8(bool vip_alu, bool chip48_jmp, bool chip48_shf, ls_mode mode);
+    using alt_t = struct {
+        bool vip_alu {};
+        bool chip48_jmp {};
+        bool chip48_shf {true};
+        ls_mode ls_mode {ls_mode::chip48_ls};
+    };
+
+    std::array<bool, KEY_COUNT> keys {};
+    bool drw_flag {true};
+
+    chip8(alt_t alt_ops);
+
+    [[nodiscard]] constexpr auto get_instruction() const -> std::string_view { return instruction; }
+    [[nodiscard]] constexpr auto get_mem() const -> std::span<const std::uint8_t> { return mem; }
+    [[nodiscard]] constexpr auto get_fb() const -> std::span<const std::uint32_t> { return fb; }
+    [[nodiscard]] constexpr auto get_stack() const -> std::span<const std::uint16_t> { return stack; }
+    [[nodiscard]] constexpr auto get_reg() const -> std::span<const std::uint8_t> { return reg; }
+    [[nodiscard]] constexpr auto get_pc() const -> std::uint16_t { return pc; }
+    [[nodiscard]] constexpr auto get_ir() const -> std::uint16_t { return ir; }
+    [[nodiscard]] constexpr auto get_sp() const -> std::uint8_t { return sp; }
+    [[nodiscard]] constexpr auto get_dt() const -> std::uint8_t { return dt; }
+    [[nodiscard]] constexpr auto get_st() const -> std::uint8_t { return st; }
+
+    [[nodiscard]] constexpr auto get_halt_flag() const -> bool { return hlt_flag; }
 
     void run_cycle();
     void decrement_timers();
@@ -38,16 +58,6 @@ public:
     void load_rom(std::string_view path);
     void unload_rom();
 
-    [[nodiscard]] constexpr auto get_mem() const -> std::span<const std::uint8_t> { return mem; }
-    [[nodiscard]] constexpr auto get_fb() const -> std::span<const std::uint32_t> { return fb; }
-    [[nodiscard]] constexpr auto get_stack() const -> std::span<const std::uint16_t> { return stack; }
-    [[nodiscard]] constexpr auto get_reg() const -> std::span<const std::uint8_t> { return reg; }
-    [[nodiscard]] constexpr auto get_instruction() const -> std::string_view { return instruction; }
-    [[nodiscard]] constexpr auto get_pc() const -> std::uint16_t { return pc; }
-    [[nodiscard]] constexpr auto get_ir() const -> std::uint16_t { return ir; }
-    [[nodiscard]] constexpr auto get_sp() const -> std::uint8_t { return sp; }
-    [[nodiscard]] constexpr auto get_dt() const -> std::uint8_t { return dt; }
-    [[nodiscard]] constexpr auto get_st() const -> std::uint8_t { return st; }
 private:
     using op_t = void (chip8::*)(std::uint16_t);
 
@@ -88,6 +98,8 @@ private:
     std::uint8_t sp{};
     std::uint8_t dt{};
     std::uint8_t st{};
+
+    bool hlt_flag {false};
 
     void op_arr_0(std::uint16_t opcode);
     void op_arr_8(std::uint16_t opcode);

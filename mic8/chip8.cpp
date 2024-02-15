@@ -1,27 +1,26 @@
 #include "chip8.hpp"
 
 #include <array>
+#include <cstdint>
 #include <format>
 #include <fstream>
 #include <limits>
 #include <string_view>
 
-chip8::chip8() = default;
-
-chip8::chip8(const bool vip_alu, const bool chip48_jmp, const bool chip48_shf, const ls_mode mode) {
-    if (vip_alu) {
+chip8::chip8(const alt_t alt_ops) {
+    if (alt_ops.vip_alu) {
         OP_ARR_8[0x1] = &chip8::op_8xy1_VIP;
         OP_ARR_8[0x2] = &chip8::op_8xy2_VIP;
         OP_ARR_8[0x3] = &chip8::op_8xy3_VIP;
     }
-    if (chip48_jmp) {
+    if (alt_ops.chip48_jmp) {
         OP_ARR_MAIN[0xB] = &chip8::op_Bxnn_CHIP48;
     }
-    if (chip48_shf) {
+    if (alt_ops.chip48_shf) {
         OP_ARR_8[0x6] = &chip8::op_8xy6_CHIP48;
         OP_ARR_8[0xE] = &chip8::op_8xyE_CHIP48;
     }
-    switch (mode) {
+    switch (alt_ops.ls_mode) {
         case ls_mode::chip8_ls:
             break;
         case ls_mode::chip48_ls:
@@ -50,7 +49,8 @@ void chip8::reset() {
     stack.fill(0);
     reg.fill(0);
     keys.fill(false);
-    draw_flag = true;
+    drw_flag = true;
+    hlt_flag = false;
     pc = ROM_ADDR;
     ir = 0;
     sp = 0;
@@ -94,13 +94,13 @@ void chip8::op_arr_F(const std::uint16_t opcode) { (this->*OP_ARR_F[opcode & 0x0
 
 void chip8::op_null(const std::uint16_t opcode) {
     instruction = std::format("0x{:X} - {:X} -> null", pc, opcode);
-    // TODO: implement stop
+    hlt_flag = true;
 }
 
 void chip8::op_00E0(const std::uint16_t opcode) {
     instruction = std::format("0x{:X} - {:04X} -> clear", pc, opcode);
     fb.fill(0u);
-    draw_flag = true;
+    drw_flag = true;
 }
 
 void chip8::op_00EE(const std::uint16_t opcode) {
@@ -111,7 +111,8 @@ void chip8::op_00EE(const std::uint16_t opcode) {
 void chip8::op_1nnn(const std::uint16_t opcode) {
     const std::uint16_t nnn = opcode & 0x0FFFu;
     instruction = std::format("0x{:X} - {:X} -> jump 0x{:03X}", pc, opcode, nnn);
-    pc = nnn; // TODO: implement stop
+    pc = nnn;
+    // TODO: implement stop????
 }
 
 void chip8::op_2nnn(const std::uint16_t opcode) {
@@ -273,7 +274,7 @@ void chip8::op_Dxyn(const std::uint16_t opcode) {
             fb[px_pox] ^= 0xFFFF'FFFFu;
         }
     }
-    draw_flag = true;
+    drw_flag = true;
 }
 
 void chip8::op_Ex9E(const std::uint16_t opcode) {
@@ -306,7 +307,7 @@ void chip8::op_Fx0A(const std::uint16_t opcode) {
     }
     if (!set) { pc -= INSTRUCTION_SIZE; }
     else {
-        // TODO: fix instruction
+        // FIXME: fix instruction
     }
 }
 
