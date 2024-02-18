@@ -16,7 +16,7 @@
 #include "imgui_memory_editor.h"
 #include "ImGuiFileDialog.h"
 
-//#include "instance_manager.hpp"
+#include "instance_manager.hpp"
 
 #include <cstdio>
 
@@ -71,7 +71,7 @@ auto main() -> int {
 
     constexpr auto clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    //  instance_manager manager;
+    instance_manager manager;
 
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_BEGIN
@@ -85,12 +85,12 @@ auto main() -> int {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+//        static constexpr ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
         ImGui::DockSpaceOverViewport();
 
-        //    manager.instance_manager_window();
-        ImGui::ShowDemoWindow();
+        manager.instance_manager_window();
+//        ImGui::ShowDemoWindow();
 
         ImGui::Render();
         int display_w {};

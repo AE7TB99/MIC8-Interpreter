@@ -1,7 +1,6 @@
 #include "instance_manager.hpp"
 #include "chip8.hpp"
 #include "imgui.h"
-#include "imgui_internal.h"
 #include <GLFW/glfw3.h>
 #include <string>
 
@@ -60,6 +59,7 @@ void instance_manager::instance_manager_window() {
 
     if (selected_id != -1) {
         instances[selected_id].cpu_view_window();
+        instances[selected_id].fb_window();
     }
 
     if (ImGui::CollapsingHeader("Create Instance", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -169,9 +169,33 @@ void instance_manager::instance_manager_window() {
     ImGui::End();
 }
 
+void instance_manager::instance::fb_window() {
+    if (interpreter.drw_flag) {
+#if defined(GL_UNPACK_ROW_LENGHT) && !defined(__EMSCRIPTEM__)
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+#endif
+        glBindTexture(GL_TEXTURE_2D, tex_id);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, interpreter.get_fb().data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        interpreter.drw_flag = false;
+    }
+
+    ImGui::SetNextWindowDockID(0x00000002);
+//    ImGui::SetNextWindowSizeConstraints(ImVec2(chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT + ImGui::GetFrameHeight()), ImVec2(FLT_MAX, FLT_MAX),
+//                                        [](ImGuiSizeCallbackData* data) {
+//                                            data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
+//                                        });
+    if (ImGui::Begin(("frame_buffer " + std::to_string(id)).c_str(), &windows.show_fb)) {
+        ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(tex_id)), ImGui::GetContentRegionAvail()); // NOLINT(*-pro-type-reinterpret-cast)
+    }
+    ImGui::End();
+}
+
 void instance_manager::instance::cpu_view_window() {
     if (windows.show_cpu_view) {
-        ImGui::SetNextWindowSize(ImVec2(152, 425), ImGuiCond_Once);
+//        ImGui::SetNextWindowDockID(0x00000002);
+//        ImGui::SetNextWindowSize(ImVec2(152, 425), ImGuiCond_Once);
         if (ImGui::Begin(("cpu_view " + std::to_string(id)).c_str(), &windows.show_cpu_view)) {
             if (ImGui::BeginTable("registers", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(60.0f, 0.0f))) {
                 ImGui::TableSetupColumn("REG");
@@ -222,4 +246,6 @@ void instance_manager::instance::cpu_view_window() {
         }
         ImGui::End();
     }
+
+
 }

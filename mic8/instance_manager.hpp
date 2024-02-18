@@ -1,7 +1,6 @@
 #pragma once
 
 #include "imgui.h"
-#include "imgui_internal.h"
 #include "chip8.hpp"
 #include "imgui_memory_editor.h"
 #include "ImGuiFileDialog.h"
@@ -38,6 +37,7 @@ private:
 
         [[nodiscard]] constexpr auto get_alt_ops() const -> chip8::alt_t { return alt_ops; }
 
+        void fb_window();
         void cpu_view_window();
 
 
