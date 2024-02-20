@@ -1,7 +1,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-
+#include <cstdio>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -13,12 +13,8 @@
 #include "../imgui/examples/libs/emscripten/emscripten_mainloop_stub.h"
 #endif
 
-#include "imgui_memory_editor.h"
-#include "ImGuiFileDialog.h"
-
 #include "instance_manager.hpp"
 
-#include <cstdio>
 
 namespace {
     void glfw_error_callback(const int error_code, const char* description) {
@@ -90,7 +86,6 @@ auto main() -> int {
         ImGui::DockSpaceOverViewport();
 
         manager.instance_manager_window();
-//        ImGui::ShowDemoWindow();
 
         ImGui::Render();
         int display_w {};

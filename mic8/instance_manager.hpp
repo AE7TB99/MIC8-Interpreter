@@ -37,13 +37,16 @@ private:
 
         [[nodiscard]] constexpr auto get_alt_ops() const -> chip8::alt_t { return alt_ops; }
 
+        void load(std::string_view path);
+
         void fb_window();
         void cpu_view_window();
-
+        void mem_view_window();
 
     private:
         chip8 interpreter;
         GLuint tex_id {};
+        MemoryEditor mem_edit;
 
         size_t id;
         state state {};

@@ -1,16 +1,16 @@
-[submodule "imgui"]
-	path = imgui
-	url = https://github.com/ocornut/imgui
+[submodule "libs/imgui"]
+	path = libs/imgui
+	url = https://github.com/ocornut/imgui.git
 	branch = docking
-[submodule "imgui_club"]
-	path = imgui_club
+[submodule "libs/imgui_club"]
+	path = libs/imgui_club
 	url = https://github.com/ocornut/imgui_club
-[submodule "ImGuiFileDialog"]
-	path = ImGuiFileDialog
+[submodule "libs/ImGuiFileDialog"]
+	path = libs/ImGuiFileDialog
 	url = https://github.com/aiekick/ImGuiFileDialog
-[submodule "chip8Archive"]
-	path = chip8Archive
+[submodule "libs/chip8Archive"]
+	path = libs/chip8Archive
 	url = https://github.com/JohnEarnest/chip8Archive
-[submodule "chip8-roms"]
-	path = chip8-roms
+[submodule "libs/chip8-roms"]
+	path = libs/chip8-roms
 	url = https://github.com/kripod/chip8-roms

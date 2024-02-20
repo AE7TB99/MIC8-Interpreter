@@ -16,9 +16,9 @@ CXX = clang++
 
 EXE = mic8.elf
 SRC_DIR = ./mic8
-IMGUI_DIR = ./imgui
-FILE_DIALOG_DIR = ./ImGuiFileDialog
-MEMORY_EDITOR_DIR = ./imgui_club/imgui_memory_editor
+IMGUI_DIR = ./libs/imgui
+FILE_DIALOG_DIR = ./libs/ImGuiFileDialog
+MEMORY_EDITOR_DIR = ./libs/imgui_club/imgui_memory_editor
 SOURCES = $(SRC_DIR)/main.cpp $(SRC_DIR)/chip8.cpp $(SRC_DIR)/instance_manager.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
@@ -86,7 +86,11 @@ endif
 %.o:$(FILE_DIALOG_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-all: $(EXE)
+roms: $(EXE)
+	cp -r libs/chip8Archive/roms/ ./roms/
+	find ./libs/chip8-roms/ -name '*.ch8' -print0 | xargs -0 cp -t ./roms/
+
+all: roms
 	@echo Build complete for $(ECHO_MESSAGE)
 
 $(EXE): $(OBJS)
@@ -94,3 +98,4 @@ $(EXE): $(OBJS)
 
 clean:
 	rm -f $(EXE) $(OBJS)
+	rm -rf roms

@@ -1,6 +1,7 @@
 #include "instance_manager.hpp"
 #include "chip8.hpp"
 #include "imgui.h"
+#include "ImGuiFileDialog.h"
 #include <GLFW/glfw3.h>
 #include <string>
 
@@ -16,7 +17,7 @@ namespace {
     }
 }
 
-auto instance_manager::instance_search() const -> size_t {
+auto instance_manager::instance_search() const -> std::size_t {
     std::size_t l = 0;
     std::size_t r = instances.size();
     while (l < r) {
@@ -60,6 +61,7 @@ void instance_manager::instance_manager_window() {
     if (selected_id != -1) {
         instances[selected_id].cpu_view_window();
         instances[selected_id].fb_window();
+        instances[selected_id].mem_view_window();
     }
 
     if (ImGui::CollapsingHeader("Create Instance", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -143,6 +145,35 @@ void instance_manager::instance_manager_window() {
             ImGui::Text("%s", ls_mode.c_str());
             ImGui::EndTable();
         }
+        ImGui::Separator();
+
+        auto button_width = ImGui::GetContentRegionAvail().x / 2;
+        ImGui::BeginDisabled(selected_id == -1);
+
+        if (ImGui::Button("Load", ImVec2(button_width, 0))) {
+            IGFD::FileDialogConfig file_dlg_config;
+            file_dlg_config.path = "./roms/";
+            file_dlg_config.countSelectionMax = 1;
+            file_dlg_config.flags = ImGuiFileDialogFlags_Modal;
+            ImGuiFileDialog::Instance()->OpenDialog("load_dlg_key", "Load ROM into instance" + std::to_string(selected_id), ".ch8", file_dlg_config);
+        };
+
+        if (ImGuiFileDialog::Instance()->Display("load_dlg_key")) {
+            if (ImGuiFileDialog::Instance()->IsOk()) {
+                instances[selected_id].load(ImGuiFileDialog::Instance()->GetFilePathName());
+                //instances[selected_id].
+            }
+
+            // close
+            ImGuiFileDialog::Instance()->Close();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Delete", ImVec2(button_width, 0))) {
+            instances.erase(instances.begin() + selected_id);
+        }
+        ImGui::EndDisabled();
         ImGui::Spacing();
     }
 
@@ -169,6 +200,11 @@ void instance_manager::instance_manager_window() {
     ImGui::End();
 }
 
+void instance_manager::instance::load(std::string_view path) {
+    state = state::LOADED;
+    interpreter.load_rom(path);
+}
+
 void instance_manager::instance::fb_window() {
     if (interpreter.drw_flag) {
 #if defined(GL_UNPACK_ROW_LENGHT) && !defined(__EMSCRIPTEM__)
@@ -181,71 +217,85 @@ void instance_manager::instance::fb_window() {
         interpreter.drw_flag = false;
     }
 
-    ImGui::SetNextWindowDockID(0x00000002);
+    ImGui::SetNextWindowDockID(0x00000005);
 //    ImGui::SetNextWindowSizeConstraints(ImVec2(chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT + ImGui::GetFrameHeight()), ImVec2(FLT_MAX, FLT_MAX),
 //                                        [](ImGuiSizeCallbackData* data) {
 //                                            data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
 //                                        });
-    if (ImGui::Begin(("frame_buffer " + std::to_string(id)).c_str(), &windows.show_fb)) {
-        ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(tex_id)), ImGui::GetContentRegionAvail()); // NOLINT(*-pro-type-reinterpret-cast)
+    if (!ImGui::Begin("Frame Buffer", &windows.show_fb)) {
+        ImGui::End();
+        return;
     }
+    ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(tex_id)), ImGui::GetContentRegionAvail()); // NOLINT(*-pro-type-reinterpret-cast)
     ImGui::End();
 }
 
 void instance_manager::instance::cpu_view_window() {
     if (windows.show_cpu_view) {
-//        ImGui::SetNextWindowDockID(0x00000002);
+        ImGui::SetNextWindowDockID(0x00000006);
 //        ImGui::SetNextWindowSize(ImVec2(152, 425), ImGuiCond_Once);
-        if (ImGui::Begin(("cpu_view " + std::to_string(id)).c_str(), &windows.show_cpu_view)) {
-            if (ImGui::BeginTable("registers", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(60.0f, 0.0f))) {
-                ImGui::TableSetupColumn("REG");
-                ImGui::TableSetupColumn("VAL");
-                ImGui::TableHeadersRow();
-                for (unsigned char i = 0; const auto& reg: interpreter.get_reg()) {
-                    ImGui::TableNextColumn();
-                    ImGui::Text("V%X", i);
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%d", reg);
-                    ++i;
-                }
-                ImGui::EndTable();
-            }
-            ImGui::SameLine();
-            if (ImGui::BeginTable("stack", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(68.0f, 0.0f))) {
-                ImGui::TableSetupColumn("LVL");
-                ImGui::TableSetupColumn("ADDR");
-                ImGui::TableHeadersRow();
-                for (unsigned char i = 0; const auto& addr: interpreter.get_stack()) {
-                    ImGui::TableNextColumn();
-                    if (i < interpreter.get_sp() - 1) {
-                        ImGui::Text("%d", i);
-                        ImGui::TableNextColumn();
-                        ImGui::Text("%04x", addr);
-                    } else if (i == interpreter.get_sp() - 1) {
-                        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));
-                        ImGui::Text("%d", i);
-                        ImGui::TableNextColumn();
-                        ImGui::Text("%04x", addr);
-                    } else {
-                        ImGui::TextDisabled("%d", i);
-                        ImGui::TableNextColumn();
-                        ImGui::TextDisabled("%04x", addr);
-                    }
-                    ++i;
-                }
-                ImGui::EndTable();
-            }
-            if (ImGui::BeginChild("##", ImVec2(0, 0), true)) {
-                ImGui::Text("PC: %X", interpreter.get_pc());
-                ImGui::Text("IR: %X", interpreter.get_ir());
-                ImGui::Text("SP: %X", interpreter.get_sp());
-                ImGui::Text("DT: %X", interpreter.get_dt());
-                ImGui::Text("ST: %X", interpreter.get_st());
-            }
-            ImGui::EndChild();
+        if (!ImGui::Begin("CPU View", &windows.show_cpu_view)) {
+            ImGui::End();
+            return;
         }
-        ImGui::End();
+        if (ImGui::BeginTable("registers", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(60.0f, 0.0f))) {
+            ImGui::TableSetupColumn("REG");
+            ImGui::TableSetupColumn("VAL");
+            ImGui::TableHeadersRow();
+            for (unsigned char i = 0; const auto& reg: interpreter.get_reg()) {
+                ImGui::TableNextColumn();
+                ImGui::Text("V%X", i);
+                ImGui::TableNextColumn();
+                ImGui::Text("%d", reg);
+                ++i;
+            }
+            ImGui::EndTable();
+        }
+        ImGui::SameLine();
+        if (ImGui::BeginTable("stack", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(68.0f, 0.0f))) {
+            ImGui::TableSetupColumn("LVL");
+            ImGui::TableSetupColumn("ADDR");
+            ImGui::TableHeadersRow();
+            for (unsigned char i = 0; const auto& addr: interpreter.get_stack()) {
+                ImGui::TableNextColumn();
+                if (i < interpreter.get_sp() - 1) {
+                    ImGui::Text("%d", i);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%04x", addr);
+                } else if (i == interpreter.get_sp() - 1) {
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));
+                    ImGui::Text("%d", i);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%04x", addr);
+                } else {
+                    ImGui::TextDisabled("%d", i);
+                    ImGui::TableNextColumn();
+                    ImGui::TextDisabled("%04x", addr);
+                }
+                ++i;
+            }
+            ImGui::EndTable();
+        }
+        if (ImGui::BeginChild("##", ImVec2(0, 0), true)) {
+            ImGui::Text("PC: %X", interpreter.get_pc());
+            ImGui::Text("IR: %X", interpreter.get_ir());
+            ImGui::Text("SP: %X", interpreter.get_sp());
+            ImGui::Text("DT: %X", interpreter.get_dt());
+            ImGui::Text("ST: %X", interpreter.get_st());
+        }
+        ImGui::EndChild();
     }
+    ImGui::End();
+}
 
-
+void instance_manager::instance::mem_view_window() {
+    ImGui::SetNextWindowDockID(0x00000004);
+    if (!ImGui::Begin("MEM View", &windows.show_mem_view)) {
+        ImGui::End();
+        return;
+    }
+    mem_edit.HighlightMin = interpreter.get_pc();
+    mem_edit.HighlightMax = interpreter.get_pc() + chip8::INSTRUCTION_SIZE;
+    mem_edit.DrawContents((void*) interpreter.get_mem().data(), chip8::MEM_SIZE);
+    ImGui::End();
 }
