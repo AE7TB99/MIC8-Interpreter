@@ -6,20 +6,21 @@
 #include <cstdint>
 #include <random>
 #include <span>
+#include <string>
 #include <string_view>
 
 class chip8 {
 public:
-    static inline constexpr std::size_t MEM_SIZE{0x1000};
-    static inline constexpr std::size_t ROM_ADDR{0x200};
-    static inline constexpr std::size_t FONTSET_SIZE{0x50};
-    static inline constexpr std::size_t FONTSET_ADDR{0x50};
-    static inline constexpr std::size_t REG_COUNT{0x10};
-    static inline constexpr std::size_t STACK_SIZE{0x10};
-    static inline constexpr std::size_t INSTRUCTION_SIZE{2};
-    static inline constexpr std::size_t KEY_COUNT{0x10};
-    static inline constexpr std::size_t VIDEO_WIDTH{64};
-    static inline constexpr std::size_t VIDEO_HEIGHT{32};
+    static constexpr std::size_t MEM_SIZE{0x1000};
+    static constexpr std::size_t ROM_ADDR{0x200};
+    static constexpr std::size_t FONTSET_SIZE{0x50};
+    static constexpr std::size_t FONTSET_ADDR{0x50};
+    static constexpr std::size_t REG_COUNT{0x10};
+    static constexpr std::size_t STACK_SIZE{0x10};
+    static constexpr std::size_t INSTRUCTION_SIZE{2};
+    static constexpr std::size_t KEY_COUNT{0x10};
+    static constexpr std::size_t VIDEO_WIDTH{64};
+    static constexpr std::size_t VIDEO_HEIGHT{32};
 
     enum class ls_mode : unsigned char {
         chip8_ls,
@@ -37,7 +38,7 @@ public:
     std::array<bool, KEY_COUNT> keys {};
     bool drw_flag {true};
 
-    chip8(alt_t alt_ops);
+    explicit chip8(alt_t alt_ops);
 
     [[nodiscard]] constexpr auto get_instruction() const -> std::string_view { return instruction; }
     [[nodiscard]] constexpr auto get_mem() const -> std::span<const std::uint8_t> { return mem; }
@@ -49,7 +50,6 @@ public:
     [[nodiscard]] constexpr auto get_sp() const -> std::uint8_t { return sp; }
     [[nodiscard]] constexpr auto get_dt() const -> std::uint8_t { return dt; }
     [[nodiscard]] constexpr auto get_st() const -> std::uint8_t { return st; }
-
     [[nodiscard]] constexpr auto get_halt_flag() const -> bool { return hlt_flag; }
 
     void run_cycle();
@@ -62,7 +62,7 @@ private:
     using op_t = void (chip8::*)(std::uint16_t);
 
     std::default_random_engine rng{std::random_device{}()};
-    std::string instruction{};
+    std::string instruction;
 
     std::array<std::uint8_t, MEM_SIZE> mem = [] consteval {
         auto m = decltype(mem){};

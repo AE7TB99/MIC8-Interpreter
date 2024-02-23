@@ -1,15 +1,15 @@
 #pragma once
 
-#include "imgui.h"
 #include "chip8.hpp"
+#include "imgui.h"
 #include "imgui_memory_editor.h"
 #include "ImGuiFileDialog.h"
 
-#include <GLFW/glfw3.h>
+#include <GL/gl.h>
 
 #include <array>
-#include <string>
-#include <string_view>
+#include <cstddef>
+#include <deque>
 #include <vector>
 
 class instance_manager {
@@ -31,14 +31,16 @@ private:
 
         instance(size_t id, chip8::alt_t alt_ops);
 
-        [[nodiscard]] constexpr auto get_id() const -> size_t { return id; }
+        [[nodiscard]] constexpr auto get_id() const -> std::size_t { return id; }
 
         [[nodiscard]] constexpr auto get_state() const -> state { return state; }
 
         [[nodiscard]] constexpr auto get_alt_ops() const -> chip8::alt_t { return alt_ops; }
 
+//        void run_cycle();
         void load(std::string_view path);
 
+        void controller_window();
         void fb_window();
         void cpu_view_window();
         void mem_view_window();
@@ -47,8 +49,9 @@ private:
         chip8 interpreter;
         GLuint tex_id {};
         MemoryEditor mem_edit;
+        std::deque<std::string> op_log;
 
-        size_t id;
+        std::size_t id;
         state state {};
         bool input_enabled {};
 
@@ -87,7 +90,7 @@ private:
 
     std::vector<instance> instances {};
 
-    [[nodiscard]] auto instance_search() const -> size_t;
+    [[nodiscard]] auto instance_search() const -> std::size_t;
     [[nodiscard]] auto selected_search() const -> ssize_t;
 };
 

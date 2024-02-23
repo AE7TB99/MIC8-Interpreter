@@ -1,11 +1,17 @@
 #include "chip8.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <format>
 #include <fstream>
+#include <ios>
 #include <limits>
+#include <random>
+#include <stdexcept>
 #include <string_view>
+#include <vector>
 
 chip8::chip8(const alt_t alt_ops) {
     if (alt_ops.vip_alu) {

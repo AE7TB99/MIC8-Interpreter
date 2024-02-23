@@ -2,8 +2,13 @@
 #include "chip8.hpp"
 #include "imgui.h"
 #include "ImGuiFileDialog.h"
-#include <GLFW/glfw3.h>
+#include <GL/gl.h>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <string>
+#include <string_view>
+#include <sys/types.h>
 
 namespace {
     void help_marker(const char* desc) {
@@ -31,12 +36,12 @@ auto instance_manager::instance_search() const -> std::size_t {
 
 auto instance_manager::selected_search() const -> ssize_t {
     for (const auto& instance: instances) {
-        if (instance.selected) { return instance.get_id(); }
+        if (instance.selected) { return static_cast<ssize_t>(instance.get_id()); }
     }
     return -1;
 }
 
-instance_manager::instance::instance(const size_t id, const chip8::alt_t alt_ops) : interpreter(chip8(alt_ops)), id(id), alt_ops(alt_ops) {
+instance_manager::instance::instance(const std::size_t id, const chip8::alt_t alt_ops) : interpreter(chip8(alt_ops)), id(id), alt_ops(alt_ops) {
     glGenTextures(1, &tex_id);
     glBindTexture(GL_TEXTURE_2D, tex_id);
 
@@ -51,16 +56,18 @@ instance_manager::instance::instance(const size_t id, const chip8::alt_t alt_ops
 }
 
 void instance_manager::instance_manager_window() {
+    ImGui::SetNextWindowDockID(0x00000001);
     if (!ImGui::Begin("Instance Manager")) {
         ImGui::End();
         return;
     }
 
-    ssize_t selected_id = selected_search();
+    const ssize_t selected_id = selected_search();
 
     if (selected_id != -1) {
-        instances[selected_id].cpu_view_window();
+        instances[selected_id].controller_window();
         instances[selected_id].fb_window();
+        instances[selected_id].cpu_view_window();
         instances[selected_id].mem_view_window();
     }
 
@@ -155,16 +162,13 @@ void instance_manager::instance_manager_window() {
             file_dlg_config.path = "./roms/";
             file_dlg_config.countSelectionMax = 1;
             file_dlg_config.flags = ImGuiFileDialogFlags_Modal;
-            ImGuiFileDialog::Instance()->OpenDialog("load_dlg_key", "Load ROM into instance" + std::to_string(selected_id), ".ch8", file_dlg_config);
+            ImGuiFileDialog::Instance()->OpenDialog("load_dlg_key", "Load ROM", ".ch8", file_dlg_config);
         };
 
         if (ImGuiFileDialog::Instance()->Display("load_dlg_key")) {
             if (ImGuiFileDialog::Instance()->IsOk()) {
                 instances[selected_id].load(ImGuiFileDialog::Instance()->GetFilePathName());
-                //instances[selected_id].
             }
-
-            // close
             ImGuiFileDialog::Instance()->Close();
         }
 
@@ -200,10 +204,46 @@ void instance_manager::instance_manager_window() {
     ImGui::End();
 }
 
+//void instance_manager::instance::run_cycle() {
+//    interpreter.run_cycle();
+//}
+
 void instance_manager::instance::load(std::string_view path) {
     state = state::LOADED;
+    interpreter.unload_rom();
     interpreter.load_rom(path);
 }
+
+void instance_manager::instance::controller_window() {
+    if (!ImGui::Begin(("Controller"), &windows.show_controller)) {
+        ImGui::End();
+        return;
+    }
+    constexpr unsigned char min = 0;
+    constexpr unsigned char max = 100;
+    static unsigned char delay;
+    ImGui::SliderScalar("Emulation speed", ImGuiDataType_U8, &delay, &min, &max, "%u aaaaaaa");
+    if (ImGui::Button("Run")) { state = state::RUNNING; }
+    static unsigned char d = 0;
+    if (state == state::RUNNING) {
+        constexpr std::chrono::nanoseconds targetInterval(1000000000 / 60);
+        auto currentTime = std::chrono::steady_clock::now();
+        static auto lastExecutionTime = std::chrono::steady_clock::now();
+        auto elapsedTime = currentTime - lastExecutionTime;
+
+        if (elapsedTime >= targetInterval) {
+            interpreter.decrement_timers();
+            lastExecutionTime = currentTime;
+        }
+        ++d;
+        if (d > delay) {
+            d = 0;
+            interpreter.run_cycle();
+        }
+    }
+    ImGui::End();
+}
+
 
 void instance_manager::instance::fb_window() {
     if (interpreter.drw_flag) {
@@ -213,15 +253,8 @@ void instance_manager::instance::fb_window() {
         glBindTexture(GL_TEXTURE_2D, tex_id);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, interpreter.get_fb().data());
         glBindTexture(GL_TEXTURE_2D, 0);
-
         interpreter.drw_flag = false;
     }
-
-    ImGui::SetNextWindowDockID(0x00000005);
-//    ImGui::SetNextWindowSizeConstraints(ImVec2(chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT + ImGui::GetFrameHeight()), ImVec2(FLT_MAX, FLT_MAX),
-//                                        [](ImGuiSizeCallbackData* data) {
-//                                            data->DesiredSize = ImVec2(data->DesiredSize.x, data->DesiredSize.x * 0.5f + ImGui::GetFrameHeight());
-//                                        });
     if (!ImGui::Begin("Frame Buffer", &windows.show_fb)) {
         ImGui::End();
         return;
@@ -232,13 +265,12 @@ void instance_manager::instance::fb_window() {
 
 void instance_manager::instance::cpu_view_window() {
     if (windows.show_cpu_view) {
-        ImGui::SetNextWindowDockID(0x00000006);
-//        ImGui::SetNextWindowSize(ImVec2(152, 425), ImGuiCond_Once);
+        //        ImGui::SetNextWindowSize(ImVec2(152, 425), ImGuiCond_Once);
         if (!ImGui::Begin("CPU View", &windows.show_cpu_view)) {
             ImGui::End();
             return;
         }
-        if (ImGui::BeginTable("registers", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(60.0f, 0.0f))) {
+        if (ImGui::BeginTable("general_registers", 2, ImGuiTableFlags_Borders, ImVec2(60.0f, 0.0f))) {
             ImGui::TableSetupColumn("REG");
             ImGui::TableSetupColumn("VAL");
             ImGui::TableHeadersRow();
@@ -252,7 +284,7 @@ void instance_manager::instance::cpu_view_window() {
             ImGui::EndTable();
         }
         ImGui::SameLine();
-        if (ImGui::BeginTable("stack", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders, ImVec2(68.0f, 0.0f))) {
+        if (ImGui::BeginTable("stack", 2, ImGuiTableFlags_Borders, ImVec2(68.0f, 0.0f))) {
             ImGui::TableSetupColumn("LVL");
             ImGui::TableSetupColumn("ADDR");
             ImGui::TableHeadersRow();
@@ -262,12 +294,14 @@ void instance_manager::instance::cpu_view_window() {
                     ImGui::Text("%d", i);
                     ImGui::TableNextColumn();
                     ImGui::Text("%04x", addr);
-                } else if (i == interpreter.get_sp() - 1) {
+                }
+                else if (i == interpreter.get_sp() - 1) {
                     ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));
                     ImGui::Text("%d", i);
                     ImGui::TableNextColumn();
                     ImGui::Text("%04x", addr);
-                } else {
+                }
+                else {
                     ImGui::TextDisabled("%d", i);
                     ImGui::TableNextColumn();
                     ImGui::TextDisabled("%04x", addr);
@@ -276,26 +310,30 @@ void instance_manager::instance::cpu_view_window() {
             }
             ImGui::EndTable();
         }
-        if (ImGui::BeginChild("##", ImVec2(0, 0), true)) {
+        if (ImGui::BeginTable("other_registers", 2, 0, ImVec2(128.0f, 0.0f))) {
+            ImGui::TableNextColumn();
             ImGui::Text("PC: %X", interpreter.get_pc());
-            ImGui::Text("IR: %X", interpreter.get_ir());
-            ImGui::Text("SP: %X", interpreter.get_sp());
+            ImGui::TableNextColumn();
             ImGui::Text("DT: %X", interpreter.get_dt());
+            ImGui::TableNextColumn();
+            ImGui::Text("IR: %X", interpreter.get_ir());
+            ImGui::TableNextColumn();
             ImGui::Text("ST: %X", interpreter.get_st());
+            ImGui::TableNextColumn();
+            ImGui::Text("SP: %X", interpreter.get_sp());
+            ImGui::EndTable();
         }
-        ImGui::EndChild();
     }
     ImGui::End();
 }
 
 void instance_manager::instance::mem_view_window() {
-    ImGui::SetNextWindowDockID(0x00000004);
     if (!ImGui::Begin("MEM View", &windows.show_mem_view)) {
         ImGui::End();
         return;
     }
     mem_edit.HighlightMin = interpreter.get_pc();
     mem_edit.HighlightMax = interpreter.get_pc() + chip8::INSTRUCTION_SIZE;
-    mem_edit.DrawContents((void*) interpreter.get_mem().data(), chip8::MEM_SIZE);
+    mem_edit.DrawContents(const_cast<unsigned char*>(interpreter.get_mem().data()), chip8::MEM_SIZE); // NOLINT(*-pro-type-const-cast)
     ImGui::End();
 }
