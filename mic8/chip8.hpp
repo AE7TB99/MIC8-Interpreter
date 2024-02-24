@@ -6,30 +6,52 @@
 #include <cstdint>
 #include <random>
 #include <span>
+#include <string>
+#include <string_view>
+#include <chrono>
 
 class chip8 {
 public:
-    static inline constexpr std::size_t MEM_SIZE {0x1000};
-    static inline constexpr std::size_t ROM_ADDR {0x200};
-    static inline constexpr std::size_t FONTSET_SIZE {0x50};
-    static inline constexpr std::size_t FONTSET_ADDR {0x50};
-    static inline constexpr std::size_t REG_COUNT {0x10};
-    static inline constexpr std::size_t STACK_SIZE {0x10};
-    static inline constexpr std::size_t INSTRUCTION_SIZE {2};
-    static inline constexpr std::size_t KEY_COUNT {0x10};
-    static inline constexpr std::size_t VIDEO_WIDTH {64};
-    static inline constexpr std::size_t VIDEO_HEIGHT {32};
+    static constexpr std::size_t MEM_SIZE{0x1000};
+    static constexpr std::size_t ROM_ADDR{0x200};
+    static constexpr std::size_t FONTSET_SIZE{0x50};
+    static constexpr std::size_t FONTSET_ADDR{0x50};
+    static constexpr std::size_t REG_COUNT{0x10};
+    static constexpr std::size_t STACK_SIZE{0x10};
+    static constexpr std::size_t INSTRUCTION_SIZE{2};
+    static constexpr std::size_t KEY_COUNT{0x10};
+    static constexpr std::size_t VIDEO_WIDTH{64};
+    static constexpr std::size_t VIDEO_HEIGHT{32};
 
-    std::array<bool, KEY_COUNT> keys {};
-    bool draw_flag {true};
-
-    enum class ls_mode : std::uint8_t {
+    enum class ls_mode : unsigned char {
         chip8_ls,
         chip48_ls,
         schip11_ls
     };
 
-    chip8(bool vip_alu, bool chip48_jmp, bool chip48_shf, ls_mode mode);
+    using alt_t = struct {
+        bool vip_alu {};
+        bool chip48_jmp {};
+        bool chip48_shf {true};
+        ls_mode ls_mode {ls_mode::chip48_ls};
+    };
+
+    std::array<bool, KEY_COUNT> keys {};
+    bool drw_flag {true};
+
+    explicit chip8(alt_t alt_ops);
+
+    [[nodiscard]] constexpr auto get_instruction() const -> std::string { return instruction; }
+    [[nodiscard]] constexpr auto get_mem() const -> std::span<const std::uint8_t> { return mem; }
+    [[nodiscard]] constexpr auto get_fb() const -> std::span<const std::uint32_t> { return fb; }
+    [[nodiscard]] constexpr auto get_stack() const -> std::span<const std::uint16_t> { return stack; }
+    [[nodiscard]] constexpr auto get_reg() const -> std::span<const std::uint8_t> { return reg; }
+    [[nodiscard]] constexpr auto get_pc() const -> std::uint16_t { return pc; }
+    [[nodiscard]] constexpr auto get_ir() const -> std::uint16_t { return ir; }
+    [[nodiscard]] constexpr auto get_sp() const -> std::uint8_t { return sp; }
+    [[nodiscard]] constexpr auto get_dt() const -> std::uint8_t { return dt; }
+    [[nodiscard]] constexpr auto get_st() const -> std::uint8_t { return st; }
+    [[nodiscard]] constexpr auto get_halt_flag() const -> bool { return hlt_flag; }
 
     void run_cycle();
     void decrement_timers();
@@ -37,35 +59,15 @@ public:
     void load_rom(std::string_view path);
     void unload_rom();
 
-    [[nodiscard]] constexpr auto get_mem() const -> std::span<const std::uint8_t> { return mem; }
-
-    [[nodiscard]] constexpr auto get_fb() const -> std::span<const std::uint32_t> { return fb; }
-
-    [[nodiscard]] constexpr auto get_stack() const -> std::span<const std::uint16_t> { return stack; }
-
-    [[nodiscard]] constexpr auto get_reg() const -> std::span<const std::uint8_t> { return reg; }
-
-    [[nodiscard]] constexpr auto get_instruction() const -> std::string_view { return instruction; }
-
-    [[nodiscard]] constexpr auto get_pc() const -> std::uint16_t { return pc; }
-
-    [[nodiscard]] constexpr auto get_ir() const -> std::uint16_t { return ir; }
-
-    [[nodiscard]] constexpr auto get_sp() const -> std::uint8_t { return sp; }
-
-    [[nodiscard]] constexpr auto get_dt() const -> std::uint8_t { return dt; }
-
-    [[nodiscard]] constexpr auto get_st() const -> std::uint8_t { return st; }
-
 private:
     using op_t = void (chip8::*)(std::uint16_t);
 
-    std::default_random_engine rng {std::random_device {}()};
-    std::string instruction {};
+    std::default_random_engine rng{std::random_device{}()};
+    std::string instruction;
 
     std::array<std::uint8_t, MEM_SIZE> mem = [] consteval {
-        auto m = decltype(mem) {};
-        std::array<std::uint8_t, FONTSET_SIZE> fontset {
+        auto m = decltype(mem){};
+        std::array<std::uint8_t, FONTSET_SIZE> fontset{
                 //@formatter:off
             0xF0, 0x90, 0x90, 0x90, 0xF0,
             0x20, 0x60, 0x20, 0x20, 0x70,
@@ -89,14 +91,16 @@ private:
         return m;
     }();
 
-    std::array<std::uint32_t, VIDEO_WIDTH * VIDEO_HEIGHT> fb {};
-    std::array<std::uint16_t, STACK_SIZE> stack {};
-    std::array<std::uint8_t, REG_COUNT> reg {};
+    std::array<std::uint32_t, VIDEO_WIDTH * VIDEO_HEIGHT> fb{};
+    std::array<std::uint16_t, STACK_SIZE> stack{};
+    std::array<std::uint8_t, REG_COUNT> reg{};
     std::uint16_t pc = {ROM_ADDR};
-    std::uint16_t ir {};
-    std::uint8_t sp {};
-    std::uint8_t dt {};
-    std::uint8_t st {};
+    std::uint16_t ir{};
+    std::uint8_t sp{};
+    std::uint8_t dt{};
+    std::uint8_t st{};
+
+    bool hlt_flag {false};
 
     void op_arr_0(std::uint16_t opcode);
     void op_arr_8(std::uint16_t opcode);
@@ -153,7 +157,7 @@ private:
     void op_Fx65_SCHIP11(std::uint16_t opcode);
 
     std::array<op_t, 0xF + 1> OP_ARR_MAIN = [] consteval {
-        auto OP_ARR = decltype(OP_ARR_MAIN) {};
+        auto OP_ARR = decltype(OP_ARR_MAIN){};
         OP_ARR.fill(&chip8::op_null);
         OP_ARR[0x0] = &chip8::op_arr_0;
         OP_ARR[0x1] = &chip8::op_1nnn;
@@ -175,7 +179,7 @@ private:
     }();
 
     std::array<op_t, 0xEE + 1> OP_ARR_0 = [] consteval {
-        auto OP_ARR = decltype(OP_ARR_0) {};
+        auto OP_ARR = decltype(OP_ARR_0){};
         OP_ARR.fill(&chip8::op_null);
         OP_ARR[0xE0] = &chip8::op_00E0;
         OP_ARR[0xEE] = &chip8::op_00EE;
@@ -183,7 +187,7 @@ private:
     }();
 
     std::array<op_t, 0xE + 1> OP_ARR_8 = [] consteval {
-        auto OP_ARR = decltype(OP_ARR_8) {};
+        auto OP_ARR = decltype(OP_ARR_8){};
         OP_ARR.fill(&chip8::op_null);
         OP_ARR[0x0] = &chip8::op_8xy0;
         OP_ARR[0x1] = &chip8::op_8xy1;
@@ -198,7 +202,7 @@ private:
     }();
 
     std::array<op_t, 0xE + 1> OP_ARR_E = [] consteval {
-        auto OP_ARR = decltype(OP_ARR_E) {};
+        auto OP_ARR = decltype(OP_ARR_E){};
         OP_ARR.fill(&chip8::op_null);
         OP_ARR[0x1] = &chip8::op_ExA1;
         OP_ARR[0xE] = &chip8::op_Ex9E;
@@ -206,7 +210,7 @@ private:
     }();
 
     std::array<op_t, 0x65 + 1> OP_ARR_F = [] consteval {
-        auto OP_ARR = decltype(OP_ARR_F) {};
+        auto OP_ARR = decltype(OP_ARR_F){};
         OP_ARR.fill(&chip8::op_null);
         OP_ARR[0x07] = &chip8::op_Fx07;
         OP_ARR[0x0A] = &chip8::op_Fx0A;
