@@ -37,11 +37,14 @@ private:
 
         [[nodiscard]] constexpr auto get_state() const -> state { return state; }
 
+        [[nodiscard]] constexpr auto get_input_enabled() const -> bool { return input_enabled; }
+
         [[nodiscard]] constexpr auto get_alt_ops() const -> chip8::alt_t { return alt_ops; }
 
         void run();
         void reset();
         void load(std::string_view path);
+        void process_input();
 
         void controller_window();
         void fb_window();

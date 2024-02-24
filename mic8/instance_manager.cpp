@@ -72,6 +72,7 @@ void instance_manager::run() {
     for (auto& instance: instances) {
         if (instance.get_state() == instance::state::RUNNING) {
             instance.run();
+            if (instance.get_input_enabled()) { instance.process_input(); }
         }
     }
 }
@@ -253,6 +254,12 @@ void instance_manager::instance::load(std::string_view path) {
     interpreter.load_rom(path);
 }
 
+void instance_manager::instance::process_input() {
+    for (std::size_t i = 0; i < chip8::KEY_COUNT; ++i) {
+        interpreter.keys[i] = ImGui::IsKeyDown(input[i]);
+    }
+}
+
 void instance_manager::instance::controller_window() {
     if (!ImGui::Begin(("Controller"), &windows.show_controller)) {
         ImGui::End();
@@ -273,6 +280,7 @@ void instance_manager::instance::controller_window() {
         state = state::LOADED;
     }
     ImGui::EndDisabled();
+    ImGui::Checkbox("Enable Input", &input_enabled);
     ImGui::End();
 }
 
