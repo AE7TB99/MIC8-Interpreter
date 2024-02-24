@@ -8,6 +8,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <chrono>
 
 class chip8 {
 public:
@@ -40,7 +41,7 @@ public:
 
     explicit chip8(alt_t alt_ops);
 
-    [[nodiscard]] constexpr auto get_instruction() const -> std::string_view { return instruction; }
+    [[nodiscard]] constexpr auto get_instruction() const -> std::string { return instruction; }
     [[nodiscard]] constexpr auto get_mem() const -> std::span<const std::uint8_t> { return mem; }
     [[nodiscard]] constexpr auto get_fb() const -> std::span<const std::uint32_t> { return fb; }
     [[nodiscard]] constexpr auto get_stack() const -> std::span<const std::uint16_t> { return stack; }

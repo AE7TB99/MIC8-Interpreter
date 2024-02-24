@@ -4,6 +4,7 @@
 #include "ImGuiFileDialog.h"
 #include <GL/gl.h>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -50,25 +51,35 @@ instance_manager::instance::instance(const std::size_t id, const chip8::alt_t al
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, interpreter.get_fb().data());
 
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void instance_manager::instance_manager_window() {
-    ImGui::SetNextWindowDockID(0x00000001);
-    if (!ImGui::Begin("Instance Manager")) {
-        ImGui::End();
-        return;
-    }
+void instance_manager::run() {
+    selected_id = selected_search();
 
-    const ssize_t selected_id = selected_search();
+    instance_manager_window();
 
     if (selected_id != -1) {
         instances[selected_id].controller_window();
         instances[selected_id].fb_window();
         instances[selected_id].cpu_view_window();
         instances[selected_id].mem_view_window();
+        instances[selected_id].instruction_log_window();
+    }
+
+    for (auto& instance: instances) {
+        if (instance.get_state() == instance::state::RUNNING) {
+            instance.run();
+        }
+    }
+}
+
+void instance_manager::instance_manager_window() {
+    if (!ImGui::Begin("Instance Manager")) {
+        ImGui::End();
+        return;
     }
 
     if (ImGui::CollapsingHeader("Create Instance", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -204,9 +215,37 @@ void instance_manager::instance_manager_window() {
     ImGui::End();
 }
 
-//void instance_manager::instance::run_cycle() {
-//    interpreter.run_cycle();
-//}
+void instance_manager::instance::run() {
+    if (ips == 0) { return; }
+
+    static constexpr std::chrono::nanoseconds timer_interval(16'666'667);
+    std::chrono::nanoseconds cycle_interval(static_cast<unsigned>(std::round(1e9 / ips)));
+
+    static auto last_timer_time = std::chrono::steady_clock::now();
+    static auto last_cycle_time = std::chrono::steady_clock::now();
+
+    auto current_time = std::chrono::steady_clock::now();
+    auto elapsed_timer_time = current_time - last_timer_time;
+    auto elapsed_cycle_time = current_time - last_cycle_time;
+
+    if (elapsed_timer_time >= timer_interval) {
+        interpreter.decrement_timers();
+        last_timer_time = current_time;
+    }
+
+    if (elapsed_cycle_time >= cycle_interval) {
+        interpreter.run_cycle();
+        while (instruction_log.size() >= instruction_log_max) { instruction_log.pop_front(); }
+        instruction_log.emplace_back(interpreter.get_instruction());
+        scroll_flag = true;
+        last_cycle_time = current_time;
+    }
+}
+
+void instance_manager::instance::reset() {
+    interpreter.reset();
+    instruction_log.clear();
+}
 
 void instance_manager::instance::load(std::string_view path) {
     state = state::LOADED;
@@ -219,28 +258,21 @@ void instance_manager::instance::controller_window() {
         ImGui::End();
         return;
     }
-    constexpr unsigned char min = 0;
-    constexpr unsigned char max = 100;
-    static unsigned char delay;
-    ImGui::SliderScalar("Emulation speed", ImGuiDataType_U8, &delay, &min, &max, "%u aaaaaaa");
+    constexpr unsigned short min = 0;
+    constexpr unsigned short max = 1000;
+    ImGui::SliderScalar("Exection Speed", ImGuiDataType_U16, &ips, &min, &max, "%u ips");
+    ImGui::BeginDisabled(state == state::EMPTY);
+    ImGui::BeginDisabled(state == state::RUNNING);
     if (ImGui::Button("Run")) { state = state::RUNNING; }
-    static unsigned char d = 0;
-    if (state == state::RUNNING) {
-        constexpr std::chrono::nanoseconds targetInterval(1000000000 / 60);
-        auto currentTime = std::chrono::steady_clock::now();
-        static auto lastExecutionTime = std::chrono::steady_clock::now();
-        auto elapsedTime = currentTime - lastExecutionTime;
-
-        if (elapsedTime >= targetInterval) {
-            interpreter.decrement_timers();
-            lastExecutionTime = currentTime;
-        }
-        ++d;
-        if (d > delay) {
-            d = 0;
-            interpreter.run_cycle();
-        }
+    if (ImGui::Button("Step")) { run(); }
+    ImGui::EndDisabled();
+    if (ImGui::Button("Stop")) { state = state::LOADED; }
+    if (ImGui::Button("Reset")) { reset(); }
+    if (ImGui::Button("Reset + Stop")) {
+        reset();
+        state = state::LOADED;
     }
+    ImGui::EndDisabled();
     ImGui::End();
 }
 
@@ -259,13 +291,14 @@ void instance_manager::instance::fb_window() {
         ImGui::End();
         return;
     }
-    ImGui::Image(reinterpret_cast<void*>(static_cast<intptr_t>(tex_id)), ImGui::GetContentRegionAvail()); // NOLINT(*-pro-type-reinterpret-cast)
+    const auto fb_window_height = ImGui::GetContentRegionAvail().y;
+    ImGui::Image(reinterpret_cast<void*>(static_cast<std::uintptr_t>(tex_id)),
+                 ImVec2(fb_window_height * 2, fb_window_height)); // NOLINT(*-pro-type-reinterpret-cast, *-no-int-to-ptr)
     ImGui::End();
 }
 
 void instance_manager::instance::cpu_view_window() {
     if (windows.show_cpu_view) {
-        //        ImGui::SetNextWindowSize(ImVec2(152, 425), ImGuiCond_Once);
         if (!ImGui::Begin("CPU View", &windows.show_cpu_view)) {
             ImGui::End();
             return;
@@ -294,14 +327,12 @@ void instance_manager::instance::cpu_view_window() {
                     ImGui::Text("%d", i);
                     ImGui::TableNextColumn();
                     ImGui::Text("%04x", addr);
-                }
-                else if (i == interpreter.get_sp() - 1) {
+                } else if (i == interpreter.get_sp() - 1) {
                     ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_HeaderHovered));
                     ImGui::Text("%d", i);
                     ImGui::TableNextColumn();
                     ImGui::Text("%04x", addr);
-                }
-                else {
+                } else {
                     ImGui::TextDisabled("%d", i);
                     ImGui::TableNextColumn();
                     ImGui::TextDisabled("%04x", addr);
@@ -334,6 +365,22 @@ void instance_manager::instance::mem_view_window() {
     }
     mem_edit.HighlightMin = interpreter.get_pc();
     mem_edit.HighlightMax = interpreter.get_pc() + chip8::INSTRUCTION_SIZE;
-    mem_edit.DrawContents(const_cast<unsigned char*>(interpreter.get_mem().data()), chip8::MEM_SIZE); // NOLINT(*-pro-type-const-cast)
+    mem_edit.DrawContents(reinterpret_cast<void*>(const_cast<unsigned char*>(interpreter.get_mem().data())),
+                          chip8::MEM_SIZE); // NOLINT(*-pro-type-const-cast, *-pro-type-reinterpret-cast)
+    ImGui::End();
+}
+
+void instance_manager::instance::instruction_log_window() {
+    if (!ImGui::Begin("Instruction Log")) {
+        ImGui::End();
+        return;
+    }
+    for (const auto& instruction: instruction_log) {
+        ImGui::Text("%s", instruction.data());
+    }
+    if (scroll_flag == true) {
+        ImGui::SetScrollY(ImGui::GetScrollMaxY());
+        scroll_flag = false;
+    }
     ImGui::End();
 }

@@ -81,11 +81,9 @@ auto main() -> int {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-//        static constexpr ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-
         ImGui::DockSpaceOverViewport();
 
-        manager.instance_manager_window();
+        manager.run();
 
         ImGui::Render();
         int display_w {};
