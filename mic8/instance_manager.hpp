@@ -63,6 +63,7 @@ private:
         std::size_t id;
         state state {};
         unsigned short ips {15};
+        unsigned char multiplier {1};
         bool input_enabled {};
 
         chip8::alt_t alt_ops;

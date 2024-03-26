@@ -235,9 +235,11 @@ void instance_manager::instance::run() {
     }
 
     if (elapsed_cycle_time >= cycle_interval) {
-        interpreter.run_cycle();
-        while (instruction_log.size() >= instruction_log_max) { instruction_log.pop_front(); }
-        instruction_log.emplace_back(interpreter.get_instruction());
+        for(unsigned char i = 0; i < multiplier; ++i) {
+            interpreter.run_cycle();
+            while (instruction_log.size() >= instruction_log_max) { instruction_log.pop_front(); }
+            instruction_log.emplace_back(interpreter.get_instruction());
+        }
         scroll_flag = true;
         last_cycle_time = current_time;
     }
@@ -265,9 +267,12 @@ void instance_manager::instance::controller_window() {
         ImGui::End();
         return;
     }
-    constexpr unsigned short min = 0;
-    constexpr unsigned short max = 1000;
-    ImGui::SliderScalar("Exection Speed", ImGuiDataType_U16, &ips, &min, &max, "%u ips");
+    constexpr unsigned short speed_min = 0;
+    constexpr unsigned short speed_max = 144;
+    constexpr unsigned char multiplier_min = 1;
+    constexpr unsigned char multiplier_max = 50;
+    ImGui::SliderScalar("Exection Speed", ImGuiDataType_U16, &ips, &speed_min, &speed_max, "%u ips");
+    ImGui::SliderScalar("Speed Multiplier", ImGuiDataType_U8, &multiplier, &multiplier_min, &multiplier_max, "x%u");
     ImGui::BeginDisabled(state == state::EMPTY);
     ImGui::BeginDisabled(state == state::RUNNING);
     if (ImGui::Button("Run")) { state = state::RUNNING; }
