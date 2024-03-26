@@ -273,7 +273,7 @@ void instance_manager::instance::controller_window() {
     unsigned short speed_max = glfwGetVideoMode(monitor)->refreshRate;
     constexpr unsigned char multiplier_min = 1;
     constexpr unsigned char multiplier_max = 50;
-    ImGui::SliderScalar("Exection Speed", ImGuiDataType_U16, &ips, &speed_min, &speed_max, "%u ips");
+    ImGui::SliderScalar("Execution Speed", ImGuiDataType_U16, &ips, &speed_min, &speed_max, "%u ips");
     ImGui::SliderScalar("Speed Multiplier", ImGuiDataType_U8, &multiplier, &multiplier_min, &multiplier_max, "x%u");
     ImGui::BeginDisabled(state == state::EMPTY);
     ImGui::BeginDisabled(state == state::RUNNING);
