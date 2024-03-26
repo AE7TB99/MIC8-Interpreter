@@ -10,6 +10,7 @@
 #include <string>
 #include <string_view>
 #include <sys/types.h>
+#include <GLFW/glfw3.h>
 
 namespace {
     void help_marker(const char* desc) {
@@ -263,12 +264,13 @@ void instance_manager::instance::process_input() {
 }
 
 void instance_manager::instance::controller_window() {
+    static GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     if (!ImGui::Begin(("Controller"), &windows.show_controller)) {
         ImGui::End();
         return;
     }
     constexpr unsigned short speed_min = 0;
-    constexpr unsigned short speed_max = 144;
+    unsigned short speed_max = glfwGetVideoMode(monitor)->refreshRate;
     constexpr unsigned char multiplier_min = 1;
     constexpr unsigned char multiplier_max = 50;
     ImGui::SliderScalar("Exection Speed", ImGuiDataType_U16, &ips, &speed_min, &speed_max, "%u ips");
