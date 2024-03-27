@@ -58,7 +58,7 @@ private:
         MemoryEditor mem_edit;
         std::deque<std::string> instruction_log;
         decltype(instruction_log)::size_type instruction_log_max {1000};
-        bool scroll_flag;
+        bool scroll_flag {};
 
         std::size_t id;
         state state {};

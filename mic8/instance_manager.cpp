@@ -1,17 +1,11 @@
 #include "instance_manager.hpp"
 #include "chip8.hpp"
-#include "imgui.h"
-#include "ImGuiFileDialog.h"
 #include <GL/gl.h>
 #include <chrono>
 #include <cmath>
-#include <cstddef>
-#include <cstdint>
 #include <string>
 #include <string_view>
-#include <sys/types.h>
 #include <GLFW/glfw3.h>
-#include <iostream>
 
 namespace {
     void help_marker(const char* desc) {
@@ -177,7 +171,7 @@ void instance_manager::instance_manager_window() {
             file_dlg_config.countSelectionMax = 1;
             file_dlg_config.flags = ImGuiFileDialogFlags_Modal;
             ImGuiFileDialog::Instance()->OpenDialog("load_dlg_key", "Load ROM", ".ch8", file_dlg_config);
-        };
+        }
 
         if (ImGuiFileDialog::Instance()->Display("load_dlg_key")) {
             if (ImGuiFileDialog::Instance()->IsOk()) {
@@ -391,7 +385,7 @@ void instance_manager::instance::instruction_log_window() {
     for (const auto& instruction: instruction_log) {
         ImGui::Text("%s", instruction.data());
     }
-    if (scroll_flag == true) {
+    if (scroll_flag) {
         ImGui::SetScrollY(ImGui::GetScrollMaxY());
         scroll_flag = false;
     }
