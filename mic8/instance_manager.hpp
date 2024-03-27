@@ -66,6 +66,10 @@ private:
         unsigned char multiplier {1};
         bool input_enabled {};
 
+        //this is kind of ugly to be honest...
+        std::chrono::time_point<std::chrono::steady_clock> last_timer_time {std::chrono::steady_clock::now()};
+        std::chrono::time_point<std::chrono::steady_clock> last_cycle_time {std::chrono::steady_clock::now()};
+
         chip8::alt_t alt_ops;
 
         struct {

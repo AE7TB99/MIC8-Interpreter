@@ -11,6 +11,7 @@
 #include <string_view>
 #include <sys/types.h>
 #include <GLFW/glfw3.h>
+#include <iostream>
 
 namespace {
     void help_marker(const char* desc) {
@@ -222,9 +223,6 @@ void instance_manager::instance::run() {
 
     static constexpr std::chrono::nanoseconds timer_interval(16'666'667);
     std::chrono::nanoseconds cycle_interval(static_cast<unsigned>(std::round(1e9 / ips)));
-
-    static auto last_timer_time = std::chrono::steady_clock::now();
-    static auto last_cycle_time = std::chrono::steady_clock::now();
 
     auto current_time = std::chrono::steady_clock::now();
     auto elapsed_timer_time = current_time - last_timer_time;
