@@ -1,6 +1,5 @@
 #include "instance_manager.hpp"
 #include "chip8.hpp"
-#include <GL/gl.h>
 #include <chrono>
 #include <cmath>
 #include <string>

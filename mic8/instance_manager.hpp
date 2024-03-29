@@ -5,7 +5,7 @@
 #include "imgui_memory_editor.h"
 #include "ImGuiFileDialog.h"
 
-#include <GL/gl.h>
+#include <GLFW/glfw3.h>
 
 #include <array>
 #include <cstddef>
