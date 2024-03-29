@@ -31,3 +31,9 @@
 *.out
 *.app
 *.elf
+
+# .idea
+.idea
+
+# CHIP-8 specific files
+*.ch8
