@@ -37,3 +37,6 @@
 
 # CHIP-8 specific files
 *.ch8
+
+# Emscripten build directory
+web
