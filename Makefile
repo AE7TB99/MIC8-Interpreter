@@ -88,7 +88,10 @@ endif
 
 roms: $(EXE)
 	cp -r libs/chip8Archive/roms/ ./roms/
-	find ./libs/chip8-roms/ -name '*.ch8' -print0 | xargs -0 cp -t ./roms/
+	cp -r libs/chip8-roms/demos/*.ch8 ./roms/
+	cp -r libs/chip8-roms/games/*.ch8 ./roms/
+	cp -r libs/chip8-roms/hires/*.ch8 ./roms/
+	cp -r libs/chip8-roms/programs/*.ch8 ./roms/
 
 all: roms
 	@echo Build complete for $(ECHO_MESSAGE)
