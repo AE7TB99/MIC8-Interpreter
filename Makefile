@@ -86,18 +86,18 @@ endif
 %.o:$(FILE_DIALOG_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
+all: roms
+	@echo Build complete for $(ECHO_MESSAGE)
+
+$(EXE): $(OBJS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
+
 roms: $(EXE)
 	cp -r libs/chip8Archive/roms/ ./roms/
 	cp -r libs/chip8-roms/demos/*.ch8 ./roms/
 	cp -r libs/chip8-roms/games/*.ch8 ./roms/
 	cp -r libs/chip8-roms/hires/*.ch8 ./roms/
 	cp -r libs/chip8-roms/programs/*.ch8 ./roms/
-
-all: roms
-	@echo Build complete for $(ECHO_MESSAGE)
-
-$(EXE): $(OBJS)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
 clean:
 	rm -f $(EXE) $(OBJS)
