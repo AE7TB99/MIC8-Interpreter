@@ -301,16 +301,19 @@ void chip8::op_Fx07(const std::uint16_t opcode) {
 void chip8::op_Fx0A(const std::uint16_t opcode) {
     const std::uint8_t x = (opcode & 0x0F00u) >> 8u;
     instruction = std::format("0x{:X} - {:X} -> v{:X} := key", pc, opcode, x);
-    bool set = false;
-    for (unsigned char i = 0; !set && i < KEY_COUNT; ++i) {
-        if (keys[i]) {
-            reg[x] = i;
-            set = true;
+    static bool set = false;
+    static unsigned char i;
+    if(!set) {
+        for (i = 0; !set && i < KEY_COUNT; ++i) {
+            if (keys[i]) {
+                set = true;
+            }
         }
     }
-    if (!set) { pc -= INSTRUCTION_SIZE; }
+    if (keys[i] || !set) { pc -= INSTRUCTION_SIZE; }
     else {
-        // FIXME: fix instruction
+        reg[x] = i;
+        set = false;
     }
 }
 
