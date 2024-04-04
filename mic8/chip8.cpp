@@ -303,12 +303,8 @@ void chip8::op_Fx0A(const std::uint16_t opcode) {
     instruction = std::format("0x{:X} - {:X} -> v{:X} := key", pc, opcode, x);
     static bool set = false;
     static unsigned char i;
-    if(!set) {
-        for (i = 0; !set && i < KEY_COUNT; ++i) {
-            if (keys[i]) {
-                set = true;
-            }
-        }
+    for (i = 0; !set && i < KEY_COUNT; ++i) {
+        set = keys[i];
     }
     if (keys[i] || !set) { pc -= INSTRUCTION_SIZE; }
     else {
