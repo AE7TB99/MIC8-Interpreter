@@ -7,7 +7,7 @@
 #include <GLFW/glfw3.h>
 
 namespace {
-    void help_marker(const char* desc) {
+    void help_marker(const char *desc) {
         ImGui::TextDisabled("(?)");
         if (ImGui::BeginItemTooltip()) {
             ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
@@ -16,6 +16,9 @@ namespace {
             ImGui::EndTooltip();
         }
     }
+
+    std::string error;
+    bool modal = false;
 }
 
 auto instance_manager::instance_search() const -> std::size_t {
@@ -24,20 +27,20 @@ auto instance_manager::instance_search() const -> std::size_t {
     while (l < r) {
         const auto m = l + (r - l) / 2;
         const auto m_val = instances[m].get_id();
-        if (m_val == m) { l = m + 1; }
-        else { r = m; }
+        if (m_val == m) { l = m + 1; } else { r = m; }
     }
     return l;
 }
 
 auto instance_manager::selected_search() const -> ssize_t {
-    for (const auto& instance: instances) {
+    for (const auto &instance: instances) {
         if (instance.selected) { return static_cast<ssize_t>(instance.get_id()); }
     }
     return -1;
 }
 
-instance_manager::instance::instance(const std::size_t id, const chip8::alt_t alt_ops) : interpreter(chip8(alt_ops)), id(id), alt_ops(alt_ops) {
+instance_manager::instance::instance(const std::size_t id, const chip8::alt_t alt_ops) : interpreter(chip8(alt_ops)),
+    id(id), alt_ops(alt_ops) {
     glGenTextures(1, &tex_id);
     glBindTexture(GL_TEXTURE_2D, tex_id);
 
@@ -46,7 +49,8 @@ instance_manager::instance::instance(const std::size_t id, const chip8::alt_t al
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, interpreter.get_fb().data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 interpreter.get_fb().data());
 
     glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -64,11 +68,26 @@ void instance_manager::run() {
         instances[selected_id].instruction_log_window();
     }
 
-    for (auto& instance: instances) {
+    for (auto &instance: instances) {
         if (instance.get_state() == instance::state::RUNNING) {
             instance.run();
             if (instance.get_input_enabled()) { instance.process_input(); }
         }
+    }
+
+    const ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (modal) ImGui::OpenPopup("Invalid ROM");
+    if (ImGui::BeginPopupModal("Invalid ROM", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s", error.data());
+        ImGui::Separator();
+
+        if (ImGui::Button("Cancel", ImVec2(240, 0))) {
+            ImGui::CloseCurrentPopup();
+            modal = false;
+        }
+        ImGui::EndPopup();
     }
 }
 
@@ -87,7 +106,8 @@ void instance_manager::instance_manager_window() {
         help_marker("8XY1 / 8XY2 / 8XY3 set VF to 0");
         ImGui::Checkbox("CHIP48 Jump", &alt_ops.chip48_jmp);
         ImGui::SameLine();
-        help_marker("BNNN is replaced by BXNN, which jumps to address XNN + the value in VX (instead of address NNN + the value in V0)");
+        help_marker(
+            "BNNN is replaced by BXNN, which jumps to address XNN + the value in VX (instead of address NNN + the value in V0)");
         ImGui::Checkbox("CHIP48 Shift", &alt_ops.chip48_shf);
         ImGui::SameLine();
         help_marker("8XY6 / 8XYE shift VX and ignore VY");
@@ -108,7 +128,8 @@ void instance_manager::instance_manager_window() {
         ImGui::Separator();
         if (ImGui::Button("Create", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
             const auto pos = instance_search();
-            instances.insert(instances.begin() + static_cast<decltype(instances)::difference_type>(pos), instance(pos, alt_ops));
+            instances.insert(instances.begin() + static_cast<decltype(instances)::difference_type>(pos),
+                             instance(pos, alt_ops));
             alt_ops = {};
         }
         ImGui::Spacing();
@@ -139,7 +160,8 @@ void instance_manager::instance_manager_window() {
         }
 
         static constexpr ImGuiTableFlags flags =
-                (ImGuiTableFlags_Borders ^ ImGuiTableFlags_BordersInnerV) | ImGuiTableFlags_Resizable | ImGuiTableFlags_NoBordersInBodyUntilResize;
+                (ImGuiTableFlags_Borders ^ ImGuiTableFlags_BordersInnerV) | ImGuiTableFlags_Resizable |
+                ImGuiTableFlags_NoBordersInBodyUntilResize;
         if (ImGui::BeginTable("instance_table", 2, flags)) {
             ImGui::TableNextColumn();
             ImGui::Text("COSMAC VIP Logic:");
@@ -189,17 +211,19 @@ void instance_manager::instance_manager_window() {
     }
 
     if (ImGui::CollapsingHeader("Current Instances", ImGuiTreeNodeFlags_DefaultOpen)) {
-        static constexpr ImGuiTableFlags flags = (ImGuiTableFlags_Borders ^ ImGuiTableFlags_BordersInnerV) | ImGuiTableFlags_ScrollY;
+        static constexpr ImGuiTableFlags flags =
+                (ImGuiTableFlags_Borders ^ ImGuiTableFlags_BordersInnerV) | ImGuiTableFlags_ScrollY;
         if (ImGui::BeginTable("instances_table", 2, flags)) {
             ImGui::TableSetupColumn("ID");
             ImGui::TableSetupColumn("State");
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableHeadersRow();
             ImGui::TableNextRow();
-            for (auto& instance: instances) {
-                const auto& id = instance.get_id();
+            for (auto &instance: instances) {
+                const auto &id = instance.get_id();
                 ImGui::TableNextColumn();
-                if (ImGui::Selectable(std::to_string(id).c_str(), &instance.selected, ImGuiSelectableFlags_SpanAllColumns)) {
+                if (ImGui::Selectable(std::to_string(id).c_str(), &instance.selected,
+                                      ImGuiSelectableFlags_SpanAllColumns)) {
                     if (selected_id != -1) { instances[selected_id].selected = false; }
                 }
                 ImGui::TableNextColumn();
@@ -227,7 +251,7 @@ void instance_manager::instance::run() {
     }
 
     if (elapsed_cycle_time >= cycle_interval) {
-        for(unsigned char i = 0; i < multiplier; ++i) {
+        for (unsigned char i = 0; i < multiplier; ++i) {
             interpreter.run_cycle();
             while (instruction_log.size() >= instruction_log_max) { instruction_log.pop_front(); }
             instruction_log.emplace_back(interpreter.get_instruction());
@@ -242,10 +266,16 @@ void instance_manager::instance::reset() {
     instruction_log.clear();
 }
 
-void instance_manager::instance::load(std::string_view path) {
-    state = state::LOADED;
-    interpreter.unload_rom();
-    interpreter.load_rom(path);
+void instance_manager::instance::load(const std::string_view path) {
+    try {
+        interpreter.unload_rom();
+        state = state::EMPTY;
+        interpreter.load_rom(path);
+        state = state::LOADED;
+    } catch (const std::invalid_argument &e) {
+        error = e.what();
+        modal = true;
+    }
 }
 
 void instance_manager::instance::process_input() {
@@ -255,7 +285,7 @@ void instance_manager::instance::process_input() {
 }
 
 void instance_manager::instance::controller_window() {
-    static GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    static GLFWmonitor *monitor = glfwGetPrimaryMonitor();
     if (!ImGui::Begin(("Controller"), &windows.show_controller)) {
         ImGui::End();
         return;
@@ -266,14 +296,15 @@ void instance_manager::instance::controller_window() {
     constexpr unsigned char multiplier_max = 50;
     ImGui::SliderScalar("Execution Speed", ImGuiDataType_U16, &ips, &speed_min, &speed_max, "%u ips");
     ImGui::SliderScalar("Speed Multiplier", ImGuiDataType_U8, &multiplier, &multiplier_min, &multiplier_max, "x%u");
+    ImGui::Separator();
     ImGui::BeginDisabled(state == state::EMPTY);
     ImGui::BeginDisabled(state == state::RUNNING);
-    if (ImGui::Button("Run")) { state = state::RUNNING; }
-    if (ImGui::Button("Step")) { run(); }
+    if (ImGui::Button("Run", ImVec2(200, 0))) { state = state::RUNNING; }
+    if (ImGui::Button("Step", ImVec2(200, 0))) { run(); }
     ImGui::EndDisabled();
-    if (ImGui::Button("Stop")) { state = state::LOADED; }
-    if (ImGui::Button("Reset")) { reset(); }
-    if (ImGui::Button("Reset + Stop")) {
+    if (ImGui::Button("Stop", ImVec2(200, 0))) { state = state::LOADED; }
+    if (ImGui::Button("Reset", ImVec2(200, 0))) { reset(); }
+    if (ImGui::Button("Reset + Stop", ImVec2(200, 0))) {
         reset();
         state = state::LOADED;
     }
@@ -282,14 +313,14 @@ void instance_manager::instance::controller_window() {
     ImGui::End();
 }
 
-
 void instance_manager::instance::fb_window() {
     if (interpreter.drw_flag) {
 #if defined(GL_UNPACK_ROW_LENGHT) && !defined(__EMSCRIPTEM__)
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 #endif
         glBindTexture(GL_TEXTURE_2D, tex_id);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, interpreter.get_fb().data());
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, chip8::VIDEO_WIDTH, chip8::VIDEO_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE,
+                        interpreter.get_fb().data());
         glBindTexture(GL_TEXTURE_2D, 0);
         interpreter.drw_flag = false;
     }
@@ -298,8 +329,9 @@ void instance_manager::instance::fb_window() {
         return;
     }
     const auto fb_window_height = ImGui::GetContentRegionAvail().y;
-    ImGui::Image(reinterpret_cast<void*>(static_cast<std::uintptr_t>(tex_id)),
-                 ImVec2(fb_window_height * 2, fb_window_height)); // NOLINT(*-pro-type-reinterpret-cast, *-no-int-to-ptr)
+    ImGui::Image(reinterpret_cast<void *>(static_cast<std::uintptr_t>(tex_id)),
+                 ImVec2(fb_window_height * 2, fb_window_height));
+    // NOLINT(*-pro-type-reinterpret-cast, *-no-int-to-ptr)
     ImGui::End();
 }
 
@@ -313,7 +345,7 @@ void instance_manager::instance::cpu_view_window() {
             ImGui::TableSetupColumn("REG");
             ImGui::TableSetupColumn("VAL");
             ImGui::TableHeadersRow();
-            for (unsigned char i = 0; const auto& reg: interpreter.get_reg()) {
+            for (unsigned char i = 0; const auto &reg: interpreter.get_reg()) {
                 ImGui::TableNextColumn();
                 ImGui::Text("V%X", i);
                 ImGui::TableNextColumn();
@@ -327,7 +359,7 @@ void instance_manager::instance::cpu_view_window() {
             ImGui::TableSetupColumn("LVL");
             ImGui::TableSetupColumn("ADDR");
             ImGui::TableHeadersRow();
-            for (unsigned char i = 0; const auto& addr: interpreter.get_stack()) {
+            for (unsigned char i = 0; const auto &addr: interpreter.get_stack()) {
                 ImGui::TableNextColumn();
                 if (i < interpreter.get_sp() - 1) {
                     ImGui::Text("%d", i);
@@ -371,8 +403,7 @@ void instance_manager::instance::mem_view_window() {
     }
     mem_edit.HighlightMin = interpreter.get_pc();
     mem_edit.HighlightMax = interpreter.get_pc() + chip8::INSTRUCTION_SIZE;
-    mem_edit.DrawContents(reinterpret_cast<void*>(const_cast<unsigned char*>(interpreter.get_mem().data())),
-                          chip8::MEM_SIZE); // NOLINT(*-pro-type-const-cast, *-pro-type-reinterpret-cast)
+    mem_edit.DrawContents(const_cast<unsigned char *>(interpreter.get_mem().data()), chip8::MEM_SIZE);
     ImGui::End();
 }
 
@@ -381,7 +412,7 @@ void instance_manager::instance::instruction_log_window() {
         ImGui::End();
         return;
     }
-    for (const auto& instruction: instruction_log) {
+    for (const auto &instruction: instruction_log) {
         ImGui::Text("%s", instruction.data());
     }
     if (scroll_flag) {
